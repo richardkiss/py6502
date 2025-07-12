@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from asm6502 import asm6502
+from .asm6502 import asm6502
 
 def go(debug=0):
     lines = list()

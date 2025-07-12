@@ -1,4 +1,4 @@
-import sim6502
+from . import sim6502
 
 class Shim6502(object):
     """Shim between the API expected by py65's MPU class and sim6502 class"""

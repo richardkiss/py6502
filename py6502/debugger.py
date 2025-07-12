@@ -12,9 +12,9 @@ logging.info('Staring Py6502 Debugger')
 
 
 # The assembler, disassembler and simulator libraries
-from asm6502 import asm6502
-from dis6502 import dis6502
-from sim6502 import sim6502
+from .asm6502 import asm6502
+from .dis6502 import dis6502
+from .sim6502 import sim6502
 
 # The termbox library for writing to the screen
 import termbox

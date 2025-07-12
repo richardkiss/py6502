@@ -36,8 +36,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
 import sys
-import test_shim
-from test_mpu6502 import Common6502Tests
+from . import test_shim
+from .test_mpu6502 import Common6502Tests
 
 class MPUTests(unittest.TestCase, Common6502Tests):
     """CMOS 65C02 Tests"""
@@ -1451,7 +1451,8 @@ class MPUTests(unittest.TestCase, Common6502Tests):
 
 
 def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
+    loader = unittest.TestLoader()
+    return loader.loadTestsFromModule(sys.modules[__name__])
 
 if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
+    unittest.main()

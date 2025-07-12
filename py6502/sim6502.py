@@ -1,4 +1,4 @@
-import memory_map
+from . import memory_map
 
 class Flags(object):
     # processor flags

@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
 import sys
-import test_shim
+from . import test_shim
 
 # TODO: tests for all the bugs here? http://forum.6502.org/viewtopic.php?t=770
 
@@ -5928,7 +5928,8 @@ class MPUTests(unittest.TestCase, Common6502Tests):
         return test_shim.Shim6502
 
 def test_suite():
-    return unittest.findTestCases(sys.modules[__name__])
+    loader = unittest.TestLoader()
+    return loader.loadTestsFromModule(sys.modules[__name__])
 
 if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
+    unittest.main()

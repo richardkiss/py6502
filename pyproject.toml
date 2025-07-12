@@ -1,0 +1,144 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "py6502"
+version = "1.0.0"
+description = "A Python-based 6502 assembler, disassembler, and simulator"
+readme = "README.txt"
+license = {text = "BSD-2-Clause"}
+authors = [
+    {name = "David Johnston", email = "dj@deadhat.com"}
+]
+maintainers = [
+    {name = "David Johnston", email = "dj@deadhat.com"}
+]
+keywords = ["6502", "assembler", "simulator", "disassembler", "retro", "cpu", "emulator"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Topic :: Software Development :: Assemblers",
+    "Topic :: Software Development :: Debuggers",
+    "Topic :: Software Development :: Interpreters",
+    "Topic :: System :: Emulators",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Assembly",
+]
+requires-python = ">=3.8"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/davidjohnston/py6502"
+Repository = "https://github.com/davidjohnston/py6502"
+Documentation = "https://github.com/davidjohnston/py6502/blob/main/README.txt"
+"Bug Tracker" = "https://github.com/davidjohnston/py6502/issues"
+
+[project.scripts]
+a6502 = "py6502.cli_asm6502:main"
+s6502 = "py6502.cli_sim6502:main"
+d6502 = "py6502.cli_dis6502:main"
+db6502 = "py6502.cli_debugger:main"
+
+[tool.setuptools.packages.find]
+include = ["py6502"]
+
+# Test configuration with pytest
+[tool.pytest.ini_options]
+testpaths = ["py6502", "tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings",
+    "--cov=py6502",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+# Code formatting and linting with ruff
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by formatter
+    "B008",  # do not perform function calls in argument defaults
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # unused imports in __init__.py
+"test_*.py" = ["F401", "F811"]  # unused imports and redefined names in tests
+
+[tool.ruff.lint.isort]
+known-first-party = ["py6502"]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["py6502"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/env/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
