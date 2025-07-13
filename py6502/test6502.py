@@ -313,11 +313,11 @@ end:   bpl vals
     # Print the initial state
     print(
         " ".ljust(status_indent)
-        + " %04x %02x %02x %02x %04x %02x" % (s.pc, s.a, s.x, s.y, s.sp, s.cc)
+        + f" {s.pc:04x} {s.a:02x} {s.x:02x} {s.y:02x} {s.sp:04x} {s.cc:02x}"
     )
 
     # Execute 200 instructions
-    for i in range(200):
+    for _i in range(200):
         # Disassemble the current instruction
         distxt, _ = d.disassemble_line(s.pc)
 
@@ -327,7 +327,7 @@ end:   bpl vals
         # Print out the disassembled instruction followed by the simulator state
         print(
             distxt.ljust(status_indent)
-            + " %04x %02x %02x %02x %04x %02x" % (s.pc, s.a, s.x, s.y, s.sp, s.cc)
+            + f" {s.pc:04x} {s.a:02x} {s.x:02x} {s.y:02x} {s.sp:04x} {s.cc:02x}"
         )
 
     print(s.memory_map.Dump())

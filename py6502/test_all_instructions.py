@@ -4,7 +4,7 @@ from .asm6502 import asm6502
 
 
 def go(debug=0):
-    lines = list()
+    lines = []
     lines.append("    ORG $100")
     lines.append("    ADC #$55	    ")
     lines.append("    ADC $20	        ")

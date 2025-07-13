@@ -3,10 +3,10 @@ import time
 
 import termbox
 
-eventdict = dict()
+eventdict = {}
 with termbox.Termbox() as tb:
     finish = False
-    while finish == False:
+    while not finish:
         event = tb.poll_event()
         (type, ch, key, mod, w, h, x, y) = event
         if type == termbox.EVENT_KEY and ch == "X":

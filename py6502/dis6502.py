@@ -13,7 +13,7 @@ class dis6502:
                 self.object_code[i] = 0x00
 
         self.labels = {}
-        if symbols == None:
+        if symbols is None:
             self.have_symbols = False
         else:
             self.have_symbols = True
@@ -24,7 +24,7 @@ class dis6502:
         self.build_opcode_table()
 
     def build_opcode_table(self):
-        self.hexcodes = dict()
+        self.hexcodes = {}
         self.hexcodes[0x00] = ("brk", "implicit")
         self.hexcodes[0x10] = ("bpl", "relative")
         self.hexcodes[0x20] = ("jsr", "absolute")
@@ -315,57 +315,57 @@ class dis6502:
         else:
             label = " " * 10
 
-        addr_text = "%04x " % address
+        addr_text = f"{address:04x} "
 
         # Format the operand based on the addressmode
         length = 1
         if addrmode == "zeropageindexedindirectx":
-            operandtext = "($%02x,x)" % operand8
+            operandtext = f"(${operand8:02x},x)"
             length = 2
         elif addrmode == "zeropageindexedindirecty":
-            operandtext = "($%02x),y" % operand8
+            operandtext = f"(${operand8:02x}),y"
             length = 2
         elif addrmode == "zeropageindirect":
-            operandtext = "($%02x)" % operand8
+            operandtext = f"(${operand8:02x})"
             length = 2
         elif addrmode == "zeropage":
-            operandtext = "$%02x" % operand8
+            operandtext = f"${operand8:02x}"
             length = 2
         elif addrmode == "zeropagex":
-            operandtext = "$%02x,x" % operand8
+            operandtext = f"${operand8:02x},x"
             length = 2
         elif addrmode == "zeropagey":
-            operandtext = "$%02x,y" % operand8
+            operandtext = f"${operand8:02x},y"
             length = 2
         elif addrmode == "immediate":
-            operandtext = "#$%02x" % operand8
+            operandtext = f"#${operand8:02x}"
             length = 2
         elif addrmode == "absolutey":
-            operandtext = "$%04x,y" % operand16
+            operandtext = f"${operand16:04x},y"
             length = 3
         elif addrmode == "absolute":
-            operandtext = "$%04x" % operand16
+            operandtext = f"${operand16:04x}"
             length = 3
         elif addrmode == "absoluteindirect":
-            operandtext = "($%04x)" % operand16
+            operandtext = f"(${operand16:04x})"
             length = 3
         elif addrmode == "absoluteindexedindirect":
-            operandtext = "($%04x,x)" % operand16
+            operandtext = f"(${operand16:04x},x)"
             length = 3
         elif addrmode == "absolutex":
-            operandtext = "$%04x,x" % operand16
+            operandtext = f"${operand16:04x},x"
             length = 3
         elif addrmode == "indirect":
-            operandtext = "($%04x)" % operand16
+            operandtext = f"(${operand16:04x})"
             length = 3
         elif addrmode == "relative":
             if operand8 < 128:
-                operandtext = "+$%02x" % operand8
+                operandtext = f"+${operand8:02x}"
             else:
                 offset = (operand8 & 0x7F) - 128
 
                 offset = -offset
-                operandtext = "-$%02x" % offset
+                operandtext = f"-${offset:02x}"
             length = 2
         elif addrmode == "accumulator":
             operandtext = "A"
@@ -376,19 +376,19 @@ class dis6502:
         elif addrmode == "":
             operandtext = ""
             length = 1
-        elif addrmode == None:
+        elif addrmode is None:
             operandtext = ""
             length = 1
         else:
-            print("ERROR: Disassembler: Address mode %s not found" % addrmode)
+            print(f"ERROR: Disassembler: Address mode {addrmode} not found")
             exit()
 
         if length == 1:
-            binary_text = "%02x       " % opcode_hex
+            binary_text = f"{opcode_hex:02x}       "
         elif length == 2:
-            binary_text = "%02x %02x    " % (opcode_hex, operandl)
+            binary_text = f"{opcode_hex:02x} {operandl:02x}    "
         else:
-            binary_text = "%02x %02x %02x " % (opcode_hex, operandl, operandh)
+            binary_text = f"{opcode_hex:02x} {operandl:02x} {operandh:02x} "
 
         the_text = label + " " + addr_text + binary_text
         the_text += opcode.ljust(5)

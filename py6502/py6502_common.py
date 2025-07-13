@@ -331,10 +331,10 @@ class py6502_common:
         }
 
         # Build a map of opcodes to list of modes the opcode supports.
-        self.map = dict()
+        self.map = {}
 
         for opcode in self.validopcodes:
-            self.map[opcode] = list()
+            self.map[opcode] = []
             if opcode in self.implicitopcodes:
                 self.map[opcode].append("implicit")
             if opcode in self.immediateopcodes:
@@ -364,7 +364,7 @@ class py6502_common:
 
         # Build the opcode value to opcode name/address mode dictionary
         # TODO: this implies all of the above
-        self.hexcodes = dict()
+        self.hexcodes = {}
         self.hexcodes[0x00] = ("brk", "implicit")
         self.hexcodes[0x10] = ("bpl", "relative")
         self.hexcodes[0x20] = ("jsr", "absolute")
@@ -638,7 +638,7 @@ class py6502_common:
         self.hexcodes[0xFF] = ("", "")
 
         # Make another list for synonyms
-        self.otherhexcodes = dict()
+        self.otherhexcodes = {}
         for hexval in range(256):
             self.otherhexcodes[hexval] = ("", "")
         self.otherhexcodes[0x1A] = ("inc", "accumulator")
@@ -647,7 +647,7 @@ class py6502_common:
         self.otherhexcodes[0xB0] = ("bge", "relative")
 
         # Make a dictionary to map opcode+address mode to the opcode value.
-        self.hexmap = dict()
+        self.hexmap = {}
         for hexval in range(256):
             op, mode = self.hexcodes[hexval]
             astring = op + mode
@@ -709,44 +709,44 @@ class py6502_common:
             extrabytes,
         ) = thetuple
         a = ("%d" % linenumber).ljust(4)
-        if labelstring != None:
-            b = (": %s" % labelstring).ljust(10)
+        if labelstring is not None:
+            b = (f": {labelstring}").ljust(10)
         else:
             b = "          "
 
-        if opcode_val == None:
+        if opcode_val is None:
             c = "   "
         else:
             if opcode_val > -1:
-                c = "%02X " % opcode_val
+                c = f"{opcode_val:02X} "
             else:
                 c = "?? "
 
-        if lowbyte == None:
+        if lowbyte is None:
             d = "   "
         else:
             if lowbyte > -1:
-                d = "%02X " % lowbyte
+                d = f"{lowbyte:02X} "
             else:
                 d = "?? "
 
-        if highbyte == None:
+        if highbyte is None:
             e = "   "
         else:
             if highbyte > -1:
-                e = "%02X " % highbyte
+                e = f"{highbyte:02X} "
             else:
                 e = "?? "
 
         # Print the opcode in 4 spaces
-        if opcode == None:
+        if opcode is None:
             f = "    "
         else:
             f = opcode.ljust(4)
 
         # Either print the operand in 10 spaces or print 10 spaces
         # when there is no operand
-        if operand == None:
+        if operand is None:
             g = "          "
         else:
             if len(operand) > 0:
@@ -775,44 +775,44 @@ class py6502_common:
             extrabytes,
         ) = thetuple
         a = ("%d " % linenumber).ljust(5)
-        aa = "%04X " % offset
+        aa = f"{offset:04X} "
 
-        if (labelstring != None) and (labelstring != ""):
-            b = (": %s:" % labelstring).ljust(10)
+        if (labelstring is not None) and (labelstring != ""):
+            b = (f": {labelstring}:").ljust(10)
         else:
             b = ":         "
 
-        if opcode_val == None:
+        if opcode_val is None:
             c = "   "
         else:
             if opcode_val > -1:
-                c = "%02X " % opcode_val
+                c = f"{opcode_val:02X} "
             else:
                 c = "?? "
 
-        if lowbyte == None:
+        if lowbyte is None:
             d = "   "
         else:
             if lowbyte > -1:
-                d = "%02X " % lowbyte
+                d = f"{lowbyte:02X} "
             else:
                 d = "?? "
 
-        if highbyte == None:
+        if highbyte is None:
             e = "   "
         else:
             if highbyte > -1:
-                e = "%02X " % highbyte
+                e = f"{highbyte:02X} "
             else:
                 e = "?? "
 
         # Print the opcode in 4 spaces
-        if opcode == None:
+        if opcode is None:
             f = "    "
         else:
             f = opcode.ljust(4)
 
-        if operand == None:
+        if operand is None:
             g = "          "
         else:
             if len(operand) > 0:
@@ -828,13 +828,13 @@ class py6502_common:
 
         # If there are extra bytes from a db, dw, dq, do or text operator,
         # print the resulting hex bytes on the next line.
-        if (extrabytes != None) and (len(extrabytes) > 1):
+        if (extrabytes is not None) and (len(extrabytes) > 1):
             hexchars = ""
             index = 0
             for index in range(0, len(extrabytes) - 1):
-                hexchars = hexchars + "%02X " % extrabytes[index]
+                hexchars = hexchars + f"{extrabytes[index]:02X} "
 
-            hexchars = hexchars + "%02X" % extrabytes[len(extrabytes) - 1]
+            hexchars = hexchars + f"{extrabytes[len(extrabytes) - 1]:02X}"
             bytestring = a + aa + ":         " + hexchars
             self.debug(1, bytestring)
             return astring + "\n" + bytestring
@@ -848,7 +848,7 @@ class py6502_common:
     def parse_line(self, thestring):
         linenumber = self.line
         self.line += 1
-        thetext = "LINE #" + ("%d" % linenumber).ljust(5) + (": %s" % thestring)
+        thetext = "LINE #" + ("%d" % linenumber).ljust(5) + (f": {thestring}")
         self.debug(2, thetext)
         mystring, comment = self.strip_comments(thestring)
         labelstring, mystring = self.strip_label(mystring, linenumber)
@@ -857,16 +857,15 @@ class py6502_common:
         premode, value = self.identify_addressmodeformat(operand, linenumber)
         addressmode = self.identify_addressmode(opcode, premode, value, linenumber)
         self.debug(
-            3, "PARSE LINE: opcode=%s  addressmode=%s" % (str(opcode), addressmode)
+            3, f"PARSE LINE: opcode={str(opcode)}  addressmode={addressmode}"
         )
-        if (opcode != None) and (addressmode != "UNDECIDED"):
+        if (opcode is not None) and (addressmode != "UNDECIDED"):
             astring = opcode + addressmode
-            self.debug(3, "PARSE LINE 2 astring=%s" % astring)
+            self.debug(3, f"PARSE LINE 2 astring={astring}")
             if astring in self.hexmap:
                 self.debug(
                     3,
-                    "PARSE LINE 3 astring=%s  self.hexmap[astring]=0x%x"
-                    % (astring, self.hexmap[astring]),
+                    f"PARSE LINE 3 astring={astring}  self.hexmap[astring]=0x{self.hexmap[astring]:x}",
                 )
                 opcode_val = self.hexmap[astring]
             else:
@@ -910,14 +909,14 @@ class py6502_common:
             self.littleendian = False
 
         # interpret extra bytes from the db, dw, ddw, dqw directives.
-        extrabytes = list()
-        if (opcode == "db") and (operand != None) and (len(operand) > 0):
+        extrabytes = []
+        if (opcode == "db") and (operand is not None) and (len(operand) > 0):
             extrabytes = self.decode_extrabytes(linenumber, thestring, operand)
-        elif (opcode == "dw") and (operand != None) and (len(operand) > 0):
+        elif (opcode == "dw") and (operand is not None) and (len(operand) > 0):
             extrabytes = self.decode_extrawords(linenumber, thestring, operand)
-        elif (opcode == "ddw") and (operand != None) and (len(operand) > 0):
+        elif (opcode == "ddw") and (operand is not None) and (len(operand) > 0):
             extrabytes = self.decode_extradoublewords(linenumber, thestring, operand)
-        elif (opcode == "dqw") and (operand != None) and (len(operand) > 0):
+        elif (opcode == "dqw") and (operand is not None) and (len(operand) > 0):
             extrabytes = self.decode_extraquadwords(linenumber, thestring, operand)
 
         thetuple = (
@@ -937,7 +936,7 @@ class py6502_common:
         self.allstuff.append(thetuple)
         self.firstpasstext(thetuple)
 
-        self.debug(2, "addressmode = %s" % addressmode)
+        self.debug(2, f"addressmode = {addressmode}")
         self.debug(2, str(self.allstuff[linenumber - 1]))
         self.debug(2, "-----------------------")
 
@@ -952,7 +951,7 @@ class py6502_common:
 
         # Second pass, compute the offsets and populate the symbol table
         self.debug(1, "Second Pass")
-        self.symbols = dict()
+        self.symbols = {}
 
         # Default to 0x0000. ORG directive overrides
         self.address = 0x0000
@@ -981,16 +980,16 @@ class py6502_common:
                     self.address = newaddr & 0x00FFFF
             offset = self.address
 
-            if opcode_val != None:
+            if opcode_val is not None:
                 self.address += 1
-            if lowbyte != None:
+            if lowbyte is not None:
                 self.address += 1
-            if highbyte != None:
+            if highbyte is not None:
                 self.address += 1
             self.address += len(extrabytes)
 
             # If there is a label, we now know its address. So store it in the symbol table
-            if (labelstring != None) and (labelstring != ""):
+            if (labelstring is not None) and (labelstring != ""):
                 self.symbols[labelstring] = offset
             tuple = (
                 offset,
@@ -1013,13 +1012,13 @@ class py6502_common:
         self.debug(1, "Symbol Table")
         for label in self.symbols:
             offset = self.symbols[label]
-            astring = (("%s" % label).ljust(10)) + (" = " + "$%04X" % offset)
+            astring = ((f"{label}").ljust(10)) + (" = " + f"${offset:04X}")
             self.debug(1, astring)
 
         # Third pass
         # Go through filling in the unknown values from the symbol table
         self.debug(1, "Third Pass")
-        self.listing = list()
+        self.listing = []
         for i in range(len(self.allstuff)):
             tuple = self.allstuff[i]
             (
@@ -1080,16 +1079,16 @@ class py6502_common:
 
             # write generated bytes to object code map
             addr = offset
-            if (opcode_val != None) and (opcode_val != -1):
+            if (opcode_val is not None) and (opcode_val != -1):
                 self.object_code[addr] = opcode_val
                 addr = addr + 1
-            if lowbyte != None:
+            if lowbyte is not None:
                 self.object_code[addr] = lowbyte
                 addr = addr + 1
-            if highbyte != None:
+            if highbyte is not None:
                 self.object_code[addr] = highbyte
                 addr = addr + 1
-            if extrabytes != None:
+            if extrabytes is not None:
                 for i in extrabytes:
                     self.object_code[addr] = i
                     addr = addr + 1
@@ -1102,7 +1101,7 @@ class py6502_common:
         print("SYMBOL TABLE")
         for label in self.symbols:
             offset = self.symbols[label]
-            astring = (("%s" % label).ljust(10)) + (" = " + "$%04X" % offset)
+            astring = ((f"{label}").ljust(10)) + (" = " + f"${offset:04X}")
             print(astring)
 
         print()
@@ -1118,13 +1117,13 @@ class py6502_common:
         while i < 65536:
             if self.object_code[i] != -1:
                 printed_a_star = 0
-                astring = "%04X: %02X" % (i, self.object_code[i])
+                astring = f"{i:04X}: {self.object_code[i]:02X}"
                 localrun = 1
                 i = i + 1
                 if i < 65536:
                     nextval = self.object_code[i]
                     while (nextval != -1) and (localrun < 16):
-                        astring = astring + " %02X" % self.object_code[i]
+                        astring = astring + f" {self.object_code[i]:02X}"
                         i = i + 1
                         localrun = localrun + 1
                         if i < 65536:
@@ -1142,7 +1141,7 @@ class py6502_common:
 
 
 def go(debug=0):
-    lines = list()
+    lines = []
     lines.append("    ADC #$55	    ")
     lines.append("    ADC $20	        ")
     lines.append("    ADC $20,X	    ")

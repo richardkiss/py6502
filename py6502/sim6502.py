@@ -34,20 +34,20 @@ class sim6502:
 
         self.build_opcode_table()
 
-        if symbols == None:
+        if symbols is None:
             self.have_symbols = False
         else:
             self.have_symbols = True
 
             self.symbols = symbols
-            self.labels = dict()
+            self.labels = {}
             for label in self.symbols:
                 offset = self.symbols[label]
                 self.labels[offset] = label
 
     # TODO: factor out to common code
     def build_opcode_table(self):
-        self.hexcodes = dict()
+        self.hexcodes = {}
         self.hexcodes[0x00] = ("brk", "implicit")
         self.hexcodes[0x10] = ("bpl", "relative")
         self.hexcodes[0x20] = ("jsr", "absolute")
@@ -329,9 +329,9 @@ class sim6502:
         lowaddr = self.memory_map.Read(0xFFFC)
         highaddr = self.memory_map.Read(0xFFFD)
         if (
-            (lowaddr != None)
+            (lowaddr is not None)
             and (lowaddr > -1)
-            and (highaddr != None)
+            and (highaddr is not None)
             and (highaddr > -1)
         ):
             address = (lowaddr & 0xFF) | ((highaddr << 8) & 0xFF00)
@@ -351,9 +351,9 @@ class sim6502:
         lowaddr = self.memory_map.Read(0xFFFA)
         highaddr = self.memory_map.Read(0xFFFB)
         if (
-            (lowaddr != None)
+            (lowaddr is not None)
             and (lowaddr > -1)
-            and (highaddr != None)
+            and (highaddr is not None)
             and (highaddr > -1)
         ):
             address = (lowaddr & 0xFF) | ((highaddr << 8) & 0xFF00)
@@ -376,9 +376,9 @@ class sim6502:
         lowaddr = self.memory_map.Read(0xFFFA)
         highaddr = self.memory_map.Read(0xFFFB)
         if (
-            (lowaddr != None)
+            (lowaddr is not None)
             and (lowaddr > -1)
-            and (highaddr != None)
+            and (highaddr is not None)
             and (highaddr > -1)
         ):
             address = (lowaddr & 0xFF) | ((highaddr << 8) & 0xFF00)
@@ -476,8 +476,8 @@ class sim6502:
             operand = operand8
             length = 1
         else:
-            print("ERROR: Address mode %s not found" % addrmode)
-            print("     : PC = 0x%04x" % self.pc)
+            print(f"ERROR: Address mode {addrmode} not found")
+            print(f"     : PC = 0x{self.pc:04x}")
             exit()
         return (operand, addr, length)
 
@@ -505,8 +505,8 @@ class sim6502:
             )
             length = 3
         else:
-            print("ERROR: Address mode %s not found for JMP or JSR" % addrmode)
-            print("     : PC = 0x%04x" % self.pc)
+            print(f"ERROR: Address mode {addrmode} not found for JMP or JSR")
+            print(f"     : PC = 0x{self.pc:04x}")
             exit()
         operand = self.memory_map.Read(addr)
         return (operand, addr, length)
@@ -517,7 +517,7 @@ class sim6502:
     # Then calls the method and passes in the operands
 
     def execute(self, address=None):
-        if address == None:
+        if address is None:
             address = self.pc
             # Pre-increment PC on instruction fetch
             self.pc += 1
@@ -538,7 +538,7 @@ class sim6502:
                 # print "METHODNAME:"+methodname
                 method = getattr(self, methodname, lambda: "nothing")
                 thing = method(addrmode, opcode, operand8, operand16)
-                if thing == None:
+                if thing is None:
                     return (None, None)
                 return thing
             else:
@@ -550,10 +550,10 @@ class sim6502:
             return ("weeds", self.pc)
 
     def none_or_byte(self, thebyte):
-        if thebyte == None:
+        if thebyte is None:
             thestr = "None"
         else:
-            thestr = "0x%02x" % thebyte
+            thestr = f"0x{thebyte:02x}"
         return thestr
 
     def show_state(self):

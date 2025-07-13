@@ -41,19 +41,19 @@ class viewplane:
         return self.iheight
 
     def mk_blanklines(self, fg=termbox.WHITE, bg=termbox.BLACK):
-        self.chars = list()
-        self.fgs = list()
-        self.bgs = list()
-        self.fgline = list()
-        self.bgline = list()
+        self.chars = []
+        self.fgs = []
+        self.bgs = []
+        self.fgline = []
+        self.bgline = []
 
-        self.blankline = list()
-        for c in range(self.iwidth):
+        self.blankline = []
+        for _c in range(self.iwidth):
             self.blankline.append(ord(" "))
             self.fgline.append(fg)
             self.bgline.append(bg)
 
-        for c in range(self.iheight):
+        for _c in range(self.iheight):
             self.chars.append(self.blankline[:])
             self.fgs.append(self.fgline[:])
             self.bgs.append(self.bgline[:])
@@ -104,10 +104,10 @@ class viewplane:
         # Add blanks to ends of lines if increasing width
         if width > self.width:
             # First increase the length of the blank lines
-            self.fgline = list()
-            self.bgline = list()
-            self.blankline = list()
-            for c in range(width):
+            self.fgline = []
+            self.bgline = []
+            self.blankline = []
+            for _c in range(width):
                 self.blankline.append(ord(" "))
                 self.fgline.append(fg)
                 self.bgline.append(bg)
@@ -172,7 +172,7 @@ class termbox_util:
         self.tb = tb
         self.fg = termbox.WHITE
         self.bg = termbox.BLACK
-        self.persistent_vp_list = list()  # for self displaying viewplanes
+        self.persistent_vp_list = []  # for self displaying viewplanes
 
         # self.can_input = hasattr(tb, poll_event) and inspect.ismethod(getattr(tb, poll_event))
 
@@ -381,7 +381,6 @@ class termbox_util:
     def add_persistent_viewplane_window(
         self, vp, width, height, srcx, srcy, viewx, viewy, active=True
     ):
-        abort = 0
         if width < 1 or height < 1:
             return None
         if width + srcx > vp.width():
@@ -455,8 +454,8 @@ class termbox_util:
     # Asks the user to press a few keys, to build a dictionary of a key map
 
     def keymapper(self):
-        keymap = dict()
-        eventmap = dict()
+        keymap = {}
+        eventmap = {}
 
         keys = [
             "key_up",
@@ -474,7 +473,7 @@ class termbox_util:
         self.addstr(2, 2, "Key Mapper")
 
         for name in keys:
-            self.addstr(2, 4, "Press %s            " % name)
+            self.addstr(2, 4, f"Press {name}            ")
             self.tb.present()
             event = self.tb.poll_event()
             keymap[name] = event
@@ -519,7 +518,7 @@ class termbox_editableline:
         tkey = 0
         windowstart = 0
         event = " "
-        if max_width == None:
+        if max_width is None:
             max_width = self.width
 
         #
@@ -579,14 +578,14 @@ class termbox_editableline:
 
             # Show the screen then wait for input
             #
-            if presenter == None:
+            if presenter is None:
                 self.tbinst.present()
                 event = self.tbinst.poll_event()
             else:
                 presenter.present()
                 event = presenter.poll_event()
             (ttype, ch, tkey, mod, w, h, x, y) = event
-            if event != None:
+            if event is not None:
                 c = validator(event, contents)
                 #
                 # Handle esc, return, delete, up, down, left, right and input characters.
@@ -627,7 +626,7 @@ class termbox_editableline:
                     cursorpos += 1
                     # self.tbutil.addstr(self.x,self.y+2," ADD SPACE      ")
                 else:
-                    if c != None:
+                    if c is not None:
                         if len(contents) < max_width:
                             contents = (
                                 contents[:cursorpos] + str(c) + contents[cursorpos:]
@@ -665,7 +664,7 @@ def integer_validator(e, contents):
 
 def hex_validator(e, contents):
     (type, ch, key, mod, w, h, x, y) = e
-    if ch != None:
+    if ch is not None:
         if type == 1 and (ch in "ABCDEFabcdef0123456789"):
             return ch
     elif type == termbox.EVENT_KEY and key == termbox.KEY_ENTER:

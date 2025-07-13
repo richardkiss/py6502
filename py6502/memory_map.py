@@ -74,7 +74,7 @@ class MemoryMap:
             if value == -1:
                 line.append("--")
             else:
-                line.append("%02X" % value)
+                line.append(f"{value:02X}")
             if (i + 1) % 16 == 0:
                 lines.append(" ".join(line))
                 line = []

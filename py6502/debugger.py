@@ -37,7 +37,7 @@ observer_selected = False
 
 current_pc_disassembly_line = 0
 disassembly_count = 0
-linelist = list()
+linelist = []
 
 
 def el_validator(e):
@@ -72,7 +72,7 @@ def draw_commands_view(vptu):
 def draw_registers_view(vptu, pc, a, x, y, sp, cc):
     cc = cc
     ccstr = ""
-    for i in range(8):
+    for _i in range(8):
         if (cc & 128) == 128:
             ccstr += "1"
         else:
@@ -85,11 +85,11 @@ def draw_registers_view(vptu, pc, a, x, y, sp, cc):
     vptu.addstr(
         x=1,
         y=1,
-        thestring="PC:%04x A:%02x X:%02x Y:%02x NVsBDIZC" % (pc, a, x, y),
+        thestring=f"PC:{pc:04x} A:{a:02x} X:{x:02x} Y:{y:02x} NVsBDIZC",
         bold=False,
     )
     vptu.addstr(
-        x=1, y=2, thestring="SP:%04x          Flags:%s" % (sp, ccstr), bold=False
+        x=1, y=2, thestring=f"SP:{sp:04x}          Flags:{ccstr}", bold=False
     )
 
 
@@ -115,7 +115,7 @@ def draw_observer_view(vptu, observer_selected, event):
     vptu.addstr(
         x=1,
         y=1,
-        thestring="ResetVec:%04x NMIVec:%04x IRQVec:%04x" % (resetvec, nmivec, irqvec),
+        thestring=f"ResetVec:{resetvec:04x} NMIVec:{nmivec:04x} IRQVec:{irqvec:04x}",
         bold=False,
     )
     # vptu.addstr(x=1, y=2, thestring="??:%04x          Flags:%s" % (sp,ccstr), bold=False)
@@ -139,15 +139,15 @@ def update_memory_inner_view(vptu, startaddr, object_code):
     endline = start + maxy
     for line in range(startline, endline + 1):
         addr = line * 8
-        vptu.addstr(x=0, y=line, thestring="%04x" % addr, bold=False)
+        vptu.addstr(x=0, y=line, thestring=f"{addr:04x}", bold=False)
         for i in range(8):
             value = object_code[addr + i]
             if value >= 0:
-                if a.instruction_map[addr + i] == None:
+                if a.instruction_map[addr + i] is None:
                     vptu.addstr(
                         x=5 + (i * 3),
                         y=line,
-                        thestring="%02x" % object_code[addr + i],
+                        thestring=f"{object_code[addr + i]:02x}",
                         bold=False,
                     )
                     # vptu.addstr(x=5+(i*3),y=line,thestring="nn",bold=False)
@@ -157,14 +157,14 @@ def update_memory_inner_view(vptu, startaddr, object_code):
                     vptu.addstr(
                         x=5 + (i * 3),
                         y=line,
-                        thestring="%02x" % object_code[addr + i],
+                        thestring=f"{object_code[addr + i]:02x}",
                         bold=True,
                     )
                 else:
                     vptu.addstr(
                         x=5 + (i * 3),
                         y=line,
-                        thestring="%02x" % object_code[addr + i],
+                        thestring=f"{object_code[addr + i]:02x}",
                         bold=False,
                     )
                     # vptu.addstr(x=5+(i*3),y=line,thestring="xx",bold=False)
@@ -178,16 +178,16 @@ def draw_memory_inner_view(vptu, object_code):
     vptu.clear()
     for line in range(8192):
         addr = line * 8
-        vptu.addstr(x=0, y=line, thestring="%04x" % addr, bold=False)
-        astr = "%04x" % addr
+        vptu.addstr(x=0, y=line, thestring=f"{addr:04x}", bold=False)
+        f"{addr:04x}"
         for i in range(8):
             value = object_code[addr + i]
             if value >= 0:
-                if a.instruction_map[addr + i] == None:
+                if a.instruction_map[addr + i] is None:
                     vptu.addstr(
                         x=5 + (i * 3),
                         y=line,
-                        thestring="%02x" % object_code[addr + i],
+                        thestring=f"{object_code[addr + i]:02x}",
                         bold=False,
                     )
                     # vptu.addstr(x=5+(i*3),y=line,thestring="nn",bold=False)
@@ -197,14 +197,14 @@ def draw_memory_inner_view(vptu, object_code):
                     vptu.addstr(
                         x=5 + (i * 3),
                         y=line,
-                        thestring="%02x" % object_code[addr + i],
+                        thestring=f"{object_code[addr + i]:02x}",
                         bold=True,
                     )
                 else:
                     vptu.addstr(
                         x=5 + (i * 3),
                         y=line,
-                        thestring="%02x" % object_code[addr + i],
+                        thestring=f"{object_code[addr + i]:02x}",
                         bold=False,
                     )
                     # vptu.addstr(x=5+(i*3),y=line,thestring="xx",bold=False)
@@ -217,16 +217,16 @@ def draw_memory_inner_view(vptu, object_code):
 def draw_memory_inner_view_partial(vptu, startline, endline, object_code):
     for line in range(startline, endline + 1):
         addr = line * 8
-        vptu.addstr(x=0, y=line, thestring="%04x" % addr, bold=False)
-        astr = "%04x" % addr
+        vptu.addstr(x=0, y=line, thestring=f"{addr:04x}", bold=False)
+        f"{addr:04x}"
         for i in range(8):
             value = object_code[addr + i]
             if value >= 0:
-                if a.instruction_map[addr + i] == None:
+                if a.instruction_map[addr + i] is None:
                     vptu.addstr(
                         x=5 + (i * 3),
                         y=line,
-                        thestring="%02x" % object_code[addr + i],
+                        thestring=f"{object_code[addr + i]:02x}",
                         bold=False,
                     )
                     # vptu.addstr(x=5+(i*3),y=line,thestring="nn",bold=False)
@@ -236,14 +236,14 @@ def draw_memory_inner_view_partial(vptu, startline, endline, object_code):
                     vptu.addstr(
                         x=5 + (i * 3),
                         y=line,
-                        thestring="%02x" % object_code[addr + i],
+                        thestring=f"{object_code[addr + i]:02x}",
                         bold=True,
                     )
                 else:
                     vptu.addstr(
                         x=5 + (i * 3),
                         y=line,
-                        thestring="%02x" % object_code[addr + i],
+                        thestring=f"{object_code[addr + i]:02x}",
                         bold=False,
                     )
                     # vptu.addstr(x=5+(i*3),y=line,thestring="xx",bold=False)
@@ -267,7 +267,7 @@ def draw_disassembly_inner_view(vptu, object_code):
     # Then work forwards until we reach +50 lines or ffff
     # Then we have a list of lines to display.
     # Show them in the window and highlight the instruction at pc.
-    linelist = list()
+    linelist = []
     line, _ = dis.disassemble_line(s.pc)  # The first line at pc
     linelist.append(line)
 
@@ -291,11 +291,7 @@ def draw_disassembly_inner_view(vptu, object_code):
             thetype = "data"
 
         if thetype == "data":
-            line = "           %04x %02x       DB  $%02x" % (
-                address,
-                object_code[address],
-                object_code[address],
-            )
+            line = f"           {address:04x} {object_code[address]:02x}       DB  ${object_code[address]:02x}"
         else:
             line, _ = dis.disassemble_line(address)
         linelist.insert(0, line)
@@ -310,7 +306,7 @@ def draw_disassembly_inner_view(vptu, object_code):
         # Look forward for the next instruction. Work out if it's instruction or data
 
         # If it's not in the instruction map, it's data.
-        if (a.instruction_map[address + 1]) == None:
+        if (a.instruction_map[address + 1]) is None:
             address = address + 1
             thetype = "data"
         # The next byte is positive in the instruction map, so it must be an instruction.
@@ -340,11 +336,7 @@ def draw_disassembly_inner_view(vptu, object_code):
             thetype = "data"
 
         if thetype == "data":
-            line = "           %04x %02x       DB  $%02x" % (
-                address,
-                object_code[address],
-                object_code[address],
-            )
+            line = f"           {address:04x} {object_code[address]:02x}       DB  ${object_code[address]:02x}"
         else:
             line, _ = dis.disassemble_line(address)
         linelist.append(line)
@@ -407,7 +399,6 @@ def dbg6502(object_code, symbol_table):
         # Compute some positions
         maxx, maxy = tbtu.getmaxxy()
         memorywindowheight = maxy - 12
-        rightwidth = maxx - leftwidth
 
         # A viewplane to hold the command information
         vp_commands = viewplane(width=maxx + 1, height=4)
@@ -450,10 +441,10 @@ def dbg6502(object_code, symbol_table):
         draw_memory_outer_view(vptu_memory_outer, memory_selected)
 
         # Add the views as persistent views in the terminal view
-        pvid_commands = tbtu.add_persistent_viewplane(vp_commands, 0, 0)
-        pvid_registers = tbtu.add_persistent_viewplane(vp_registers, 0, 4)
-        pvid_action = tbtu.add_persistent_viewplane(vp_action, 0, 8)
-        pvid_observer = tbtu.add_persistent_viewplane(vp_observer, leftwidth, 4)
+        tbtu.add_persistent_viewplane(vp_commands, 0, 0)
+        tbtu.add_persistent_viewplane(vp_registers, 0, 4)
+        tbtu.add_persistent_viewplane(vp_action, 0, 8)
+        tbtu.add_persistent_viewplane(vp_observer, leftwidth, 4)
         # pvid_goto = tbtu.add_persistent_viewplane(vp_goto,10,10)
 
         # Goto window is only visible when taking goto input. Hide it.
@@ -462,7 +453,7 @@ def dbg6502(object_code, symbol_table):
         # The memory view is a window into the viewplane since the
         # viewplane has the whole of memory laid out in.
         # Parameters are : vp,width,height,srcx,srcy,viewx,viewy,active
-        pvid_memory_outer = tbtu.add_persistent_viewplane(vp_memory_outer, 0, 12)
+        tbtu.add_persistent_viewplane(vp_memory_outer, 0, 12)
 
         # Put the inner memory view in the outer memory view
         pvid_memory_inner = vptu_memory_outer.add_persistent_viewplane_window(
@@ -483,12 +474,12 @@ def dbg6502(object_code, symbol_table):
         # The disassembly view is a window into the viewplane since the
         # viewplane has a lot of listing laid out in.
         # Parameters are : vp,width,height,srcx,srcy,viewx,viewy,active
-        pvid_disassembly_outer = tbtu.add_persistent_viewplane(
+        tbtu.add_persistent_viewplane(
             vp_disassembly_outer, leftwidth, 12
         )
 
         # Put the inner memory view in the outer memory view
-        pvid_disassembly_inner = vptu_disassembly_outer.add_persistent_viewplane_window(
+        vptu_disassembly_outer.add_persistent_viewplane_window(
             vp_disassembly_inner, (maxx - leftwidth - 2), maxy - 14, 0, 0, 1, 1, True
         )
 
@@ -624,7 +615,7 @@ def dbg6502(object_code, symbol_table):
                     vptu_action.addstr(
                         1,
                         2,
-                        ("modified %04x=%02x    " % (addr, object_code[addr])).ljust(
+                        (f"modified {addr:04x}={object_code[addr]:02x}    ").ljust(
                             leftwidth - 2
                         ),
                     )
@@ -719,11 +710,11 @@ parser.add_argument(
 options = parser.parse_args()
 
 filename = str(options.filename)
-if options.filename == None:
+if options.filename is None:
     print("[py6502 Debugger] Error - A filename of an assembly file is required")
     quit()
 
-if options.verbose == True:
+if options.verbose:
     verbose = True
 else:
     verbose = False
