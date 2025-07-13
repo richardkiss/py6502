@@ -19,9 +19,9 @@ loop:
 lines = thecode.splitlines()
 
 a = asm6502()
-(l, s) = a.assemble(lines)
-for line in l:
+(listing, symbols) = a.assemble(lines)
+for line in listing:
     print(line)
 print()
-for line in s:
+for line in symbols:
     print(line)

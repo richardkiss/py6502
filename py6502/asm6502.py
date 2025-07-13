@@ -56,10 +56,10 @@ class asm6502:
         self.line = 1
 
     def info(self, linenumber, text):
-        self.debug(1, "INFO: Line %d :%s" % (linenumber, text))
+        self.debug(1, f"INFO: Line {linenumber} :{text}")
 
     def warning(self, linenumber, linetext, text):
-        print("WARNING: Line %d :%s" % (linenumber, text))
+        print(f"WARNING: Line {linenumber} :{text}")
         print("  " + linetext)
 
     def strip_comments(self, thestring):
@@ -74,7 +74,7 @@ class asm6502:
         if level > self.debuglevel:
             pass
         else:
-            print("   DEBUG(%d):%s" % (level, astring))
+            print(f"   DEBUG({level}):{astring}")
 
     # find a label at the front. Strip it and return the symbol
     def strip_label(self, thestring, linenumber):
@@ -90,8 +90,7 @@ class asm6502:
                 self.labellist.append((linenumber, labelstr))
                 self.debug(
                     2,
-                    "Line %d Label %s found at line %d"
-                    % (linenumber, labelstr, linenumber),
+                    f"Line {linenumber} Label {labelstr} found at line {linenumber}",
                 )
                 return (labelstr, returnstr)
             else:
@@ -101,11 +100,11 @@ class asm6502:
                     linetext=thestring,
                     text="More than one thing in the label field. Ignoring everything between the first space and the colon",
                 )
-                self.labellist.append((linenum, labelstr))
-                self.labeldict[labelstr] = linenum
+                self.labellist.append((linenumber, labelstr))
+                self.labeldict[labelstr] = linenumber
                 self.info(
                     linenumber,
-                    text="Label %s found at line %d" % (labelstr, linenumber),
+                    text=f"Label {labelstr} found at line {linenumber}",
                 )
                 return (labelstr, returnstr)
 
@@ -331,8 +330,7 @@ class asm6502:
 
         self.debug(
             2,
-            "INFO: GOT TO END OF IDENTIFY_ADDRESSMODE: Line %d opcode:%s premode:%s"
-            % (linenumber, opcode, premode),
+            f"INFO: GOT TO END OF IDENTIFY_ADDRESSMODE: Line {linenumber} opcode:{opcode} premode:{premode}",
         )
         return "UNDECIDED"
 
@@ -349,7 +347,7 @@ class asm6502:
         thelist = eval(newstring)
         newlist = []
         for i in thelist:
-            if type(i) == int:
+            if isinstance(i, int):
                 a = i & 0x00FF
                 b = ((i & 0x000000000000FF00) >> 8) & 0x000000FF
                 c = ((i & 0x0000000000FF0000) >> 16) & 0x000000FF
@@ -397,7 +395,7 @@ class asm6502:
         thelist = eval(newstring)
         newlist = []
         for i in thelist:
-            if type(i) == int:
+            if isinstance(i, int):
                 a = i & 0x00FF
                 b = ((i & 0x0000FF00) >> 8) & 0x000000FF
                 c = ((i & 0x00FF0000) >> 16) & 0x000000FF
@@ -448,7 +446,7 @@ class asm6502:
             else:
                 value = eval(theword)
 
-            if type(value) == int:
+            if isinstance(value, int):
                 a = value & 0x00FF
                 b = ((value & 0xFF00) >> 8) & 0x00FF
                 if self.littleendian:
@@ -459,7 +457,7 @@ class asm6502:
                     newlist.append(a)
             else:
                 self.warning(
-                    linenumber, linetext, f"Can't parse word string {newstring}"
+                    linenumber, linetext, f"Can't parse word string {theword}"
                 )
                 emptylist = []
                 return emptylist
@@ -481,7 +479,7 @@ class asm6502:
         thelist = eval(newstring)
         newlist = []
         for i in thelist:
-            if type(i) == int:
+            if isinstance(i, int):
                 newlist.append(i)
             else:
                 self.warning(
@@ -1225,7 +1223,7 @@ class asm6502:
             num_extrabytes,
             linetext,
         ) = thetuple
-        a = ("%d" % linenumber).ljust(4)
+        a = f"{linenumber}".ljust(4)
         if labelstring is not None:
             b = (f": {labelstring}").ljust(10)
         else:
@@ -1293,7 +1291,7 @@ class asm6502:
             num_extrabytes,
             linetext,
         ) = thetuple
-        a = ("%d " % linenumber).ljust(5)
+        a = f"{linenumber} ".ljust(5)
         aa = f"{offset:04X} "
 
         if (labelstring is not None) and (labelstring != ""):
@@ -1367,7 +1365,7 @@ class asm6502:
     def parse_line(self, thestring):
         linenumber = self.line
         self.line += 1
-        thetext = "LINE #" + ("%d" % linenumber).ljust(5) + (f": {thestring}")
+        thetext = "LINE #" + f"{linenumber}".ljust(5) + (f": {thestring}")
         self.debug(2, thetext)
         mystring, comment = self.strip_comments(thestring)
         labelstring, mystring = self.strip_label(mystring, linenumber)
@@ -1519,7 +1517,7 @@ class asm6502:
             if highbyte is not None:
                 self.address += 1
             # self.address += len(extrabytes)
-            if type(num_extrabytes) == int:
+            if isinstance(num_extrabytes, int):
                 self.address += num_extrabytes
 
             # If there is a label, we now know its address. So store it in the symbol table
@@ -1593,7 +1591,7 @@ class asm6502:
                     self.warning(
                         linenumber,
                         "",
-                        "branch can't reach destination, delta is %d" % delta,
+                        f"branch can't reach destination, delta is {delta}",
                     )
             elif (lowbyte == -1) and (
                 (addressmode in self.modeswithlowbytevalue)

@@ -14,10 +14,7 @@ class TrapException(Exception):
         self.access_mode = access_mode
 
     def __str__(self):
-        return "Trap when accessing memory location $%X with mode %d" % (
-            self.address,
-            self.access_mode,
-        )
+        return f"Trap when accessing memory location ${self.address:X} with mode {self.access_mode}"
 
 
 class MemoryMap:

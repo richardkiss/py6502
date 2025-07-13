@@ -15,6 +15,8 @@
 # zeropage indirect       ($20)                  ~ "zeropageindirect"
 # absolute indirect       ($5000) - only JMP     ~ "absoluteindirect"
 
+from asm6502 import asm6502
+
 
 class py6502_common:
     def __init__(self):
@@ -708,7 +710,7 @@ class py6502_common:
             comment,
             extrabytes,
         ) = thetuple
-        a = ("%d" % linenumber).ljust(4)
+        a = f"{linenumber:d}".ljust(4)
         if labelstring is not None:
             b = (f": {labelstring}").ljust(10)
         else:
@@ -774,7 +776,7 @@ class py6502_common:
             comment,
             extrabytes,
         ) = thetuple
-        a = ("%d " % linenumber).ljust(5)
+        a = f"{linenumber:d} ".ljust(5)
         aa = f"{offset:04X} "
 
         if (labelstring is not None) and (labelstring != ""):
@@ -848,7 +850,7 @@ class py6502_common:
     def parse_line(self, thestring):
         linenumber = self.line
         self.line += 1
-        thetext = "LINE #" + ("%d" % linenumber).ljust(5) + (f": {thestring}")
+        thetext = "LINE #" + f"{linenumber:d}".ljust(5) + (f": {thestring}")
         self.debug(2, thetext)
         mystring, comment = self.strip_comments(thestring)
         labelstring, mystring = self.strip_label(mystring, linenumber)
@@ -1045,7 +1047,7 @@ class py6502_common:
                     self.warning(
                         linenumber,
                         "",
-                        "branch can't reach destination, delta is %d" % delta,
+                        f"branch can't reach destination, delta is {delta}",
                     )
             elif (lowbyte == -1) and (
                 (addressmode in self.modeswithlowbytevalue)

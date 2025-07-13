@@ -1,13 +1,12 @@
 #!/usr/bin/python
 
+import logging
 from inspect import currentframe, getframeinfo
 
 import termbox
 
 cf = currentframe()
 filename = getframeinfo(cf).filename
-
-import logging
 
 # Implements a virtual screen of arbitary size.
 # A rectangular view or views of a chosen size can be displayed on
@@ -84,7 +83,7 @@ class viewplane:
             self.iheight = height
 
         if height > self.iheight:
-            for i in range(height - self.iheight):
+            for _i in range(height - self.iheight):
                 self.chars.append(self.blankline)
                 self.fgs.append(self.fgline)
                 self.bgs.append(self.bgline)
@@ -102,15 +101,15 @@ class viewplane:
             self.iwidth = width
 
         # Add blanks to ends of lines if increasing width
-        if width > self.width:
+        if width > self.iwidth:
             # First increase the length of the blank lines
             self.fgline = []
             self.bgline = []
             self.blankline = []
             for _c in range(width):
                 self.blankline.append(ord(" "))
-                self.fgline.append(fg)
-                self.bgline.append(bg)
+                self.fgline.append(termbox.WHITE)
+                self.bgline.append(termbox.BLACK)
 
             # Then tack blanks on the ends.
             for i in range(self.iheight):
@@ -228,15 +227,12 @@ class termbox_util:
             if bold:
                 self.tb.change_cell(x + i, y, ord(thestring[i]), self.bg, self.fg)
             else:
-                if type(thestring) != str:
+                if not isinstance(thestring, str):
                     cf = currentframe()
                     lineno = cf.f_lineno
                     fn = getframeinfo(cf).filename
                     logging.debug(
-                        str(
-                            "File: %s line: %d , Expecting sting, got %s"
-                            % (fn, lineno, thestring)
-                        )
+                        f"File: {fn} line: {lineno} , Expecting string, got {thestring}"
                     )
                 self.tb.change_cell(x + i, y, ord(thestring[i]), self.fg, self.bg)
 
@@ -551,19 +547,19 @@ class termbox_editableline:
                     self.tbutil.addstr(
                         self.x + cpos, self.y, displaystr[cpos], bold=False
                     )
-                except:
+                except IndexError:
                     pass
                 try:
                     self.tbutil.addstr(
                         self.x + cpos + 1, self.y, displaystr[cpos + 1 :], bold=True
                     )
-                except:
+                except IndexError:
                     pass
                 try:
                     self.tbutil.addstr(
                         self.x + len(displaystr), self.y, "  ", bold=False
                     )
-                except:
+                except IndexError:
                     pass
                 # Diagnostic output
                 # self.tbutil.addstr(self.x,self.y+26,displaystr[:cpos]+"   ",bold=True)

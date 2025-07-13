@@ -5,13 +5,13 @@ import copy
 import logging
 import sys
 
+# Set up logging before other imports that might use logging
 logging.basicConfig(filename="py6502_debugger.log", level=logging.DEBUG)
 logging.info("Staring Py6502 Debugger")
 
-
 # The assembler, disassembler and simulator libraries
 # The termbox library for writing to the screen
-import termbox
+import termbox  # noqa: E402
 
 # temrbox_util adds a curses like interface to termbox
 # Also get the virtual viewplane support
@@ -19,16 +19,16 @@ import termbox
 # on a real screen. Good for scrolling through lists.
 # Have a static list (like a memory view) and move
 # the viewport.
-from termbox_util import (
+from termbox_util import (  # noqa: E402
     hex_validator,
     termbox_editableline,
     termbox_util,
     viewplane,
 )
 
-from .asm6502 import asm6502
-from .dis6502 import dis6502
-from .sim6502 import sim6502
+from .asm6502 import asm6502  # noqa: E402
+from .dis6502 import dis6502  # noqa: E402
+from .sim6502 import sim6502  # noqa: E402
 
 leftwidth = 40
 memory_selected = True
@@ -88,9 +88,7 @@ def draw_registers_view(vptu, pc, a, x, y, sp, cc):
         thestring=f"PC:{pc:04x} A:{a:02x} X:{x:02x} Y:{y:02x} NVsBDIZC",
         bold=False,
     )
-    vptu.addstr(
-        x=1, y=2, thestring=f"SP:{sp:04x}          Flags:{ccstr}", bold=False
-    )
+    vptu.addstr(x=1, y=2, thestring=f"SP:{sp:04x}          Flags:{ccstr}", bold=False)
 
 
 def draw_observer_view(vptu, observer_selected, event):
@@ -136,7 +134,7 @@ def update_memory_inner_view(vptu, startaddr, object_code):
     maxx, maxy = vptu.getmaxxy()
 
     startline = startaddr / 8
-    endline = start + maxy
+    endline = startaddr + maxy
     for line in range(startline, endline + 1):
         addr = line * 8
         vptu.addstr(x=0, y=line, thestring=f"{addr:04x}", bold=False)
@@ -346,8 +344,8 @@ def draw_disassembly_inner_view(vptu, object_code):
 
     # Add the reverse list
     for i in range(reversecount):
-        if type(linelist[i]) != str:
-            logging.debug(str(("linelist[%d] = " % i) + str(linelist[i])))
+        if not isinstance(linelist[i], str):
+            logging.debug(f"linelist[{i}] = {linelist[i]}")
         vptu.addstr(x=0, y=i, thestring=linelist[i], bold=False)
 
     # Add the current instruction highlighted
@@ -376,7 +374,7 @@ def draw_disassembly_outer_view(vptu, disassembly_selected):
 # g was pressed so we bring up a window for the address or symbol to by typed into
 def draw_goto_view(tb, tbtu, thetext):
     # A viewplane in which to type
-    tbtu.clear
+    tbtu.clear()
     tbtu.border()
     tbtu.addstr(1, 1, "Goto Addr(hex):" + str(thetext))
 
@@ -474,9 +472,7 @@ def dbg6502(object_code, symbol_table):
         # The disassembly view is a window into the viewplane since the
         # viewplane has a lot of listing laid out in.
         # Parameters are : vp,width,height,srcx,srcy,viewx,viewy,active
-        tbtu.add_persistent_viewplane(
-            vp_disassembly_outer, leftwidth, 12
-        )
+        tbtu.add_persistent_viewplane(vp_disassembly_outer, leftwidth, 12)
 
         # Put the inner memory view in the outer memory view
         vptu_disassembly_outer.add_persistent_viewplane_window(
