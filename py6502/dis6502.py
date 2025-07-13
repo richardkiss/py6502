@@ -7,7 +7,6 @@
 
 class dis6502:
     def __init__(self, object_code, symbols=None):
-
         self.object_code = object_code
         for i in range(len(self.object_code)):
             if self.object_code[i] < 0:
@@ -363,7 +362,7 @@ class dis6502:
             if operand8 < 128:
                 operandtext = "+$%02x" % operand8
             else:
-                offset = (operand8 & 0x7f) - 128
+                offset = (operand8 & 0x7F) - 128
 
                 offset = -offset
                 operandtext = "-$%02x" % offset
@@ -392,7 +391,7 @@ class dis6502:
             binary_text = "%02x %02x %02x " % (opcode_hex, operandl, operandh)
 
         the_text = label + " " + addr_text + binary_text
-        the_text += (opcode.ljust(5))
+        the_text += opcode.ljust(5)
         the_text += operandtext
         return (the_text, length)
 

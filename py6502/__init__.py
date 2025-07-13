@@ -9,7 +9,7 @@ This package provides comprehensive tools for working with 6502 assembly code:
 
 CLI tools are available as:
 - a6502: Assembler
-- s6502: Simulator  
+- s6502: Simulator
 - d6502: Disassembler
 - db6502: Debugger
 """

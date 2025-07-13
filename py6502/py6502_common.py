@@ -15,96 +15,319 @@
 # zeropage indirect       ($20)                  ~ "zeropageindirect"
 # absolute indirect       ($5000) - only JMP     ~ "absoluteindirect"
 
+
 class py6502_common(object):
     def __init__(self):
-
         # Build the opcode type tables
 
         self.modeswithlowbytevalue = {
-            "immediate", "absolute", "zeropage", "absolutex", "absolutey",
-            "zeropagex", "zeropagey", "zeropageindexedindirectx", "zeropageindexedindirecty",
-            "absoluteindexedindirect", "zeropageindirect",
-            "absoluteindirect"
+            "immediate",
+            "absolute",
+            "zeropage",
+            "absolutex",
+            "absolutey",
+            "zeropagex",
+            "zeropagey",
+            "zeropageindexedindirectx",
+            "zeropageindexedindirecty",
+            "absoluteindexedindirect",
+            "zeropageindirect",
+            "absoluteindirect",
         }
         self.modeswithhighbytevalue = {
-            "absolute", "absolutex", "absolutey",
-            "absoluteindexedindirect", "absoluteindirect"
+            "absolute",
+            "absolutex",
+            "absolutey",
+            "absoluteindexedindirect",
+            "absoluteindirect",
         }
 
-        self.validdirectives = {
-            "db", "dw", "ddw", "dqw", "str", "org", "le", "be"
-        }
+        self.validdirectives = {"db", "dw", "ddw", "dqw", "str", "org", "le", "be"}
 
         # TODO: construct this as the union of all of the others.
         self.validopcodes = {
-            "adc", "and", "asl", "bcc", "bcs", "beq", "bit", "bmi", "bne",
-            "bpl", "bra", "brk", "bvc", "bvs", "clc", "cld", "cli", "clv",
-            "cmp", "cpx", "cpy", "dea", "dec", "dex", "dey", "eor", "inc", "ina", "inx",
-            "iny", "jmp", "jsr", "lda", "ldx", "ldy", "lsr", "nop", "ora",
-            "pha", "php", "phx", "phy", "pla", "plp", "plx", "ply", "rol",
-            "ror", "rti", "rts", "sbc", "sec", "sed", "sei", "sta", "stx",
-            "sty", "stz", "tax", "tay", "trb", "tsb", "tsx", "txa", "txs",
-            "tya"
+            "adc",
+            "and",
+            "asl",
+            "bcc",
+            "bcs",
+            "beq",
+            "bit",
+            "bmi",
+            "bne",
+            "bpl",
+            "bra",
+            "brk",
+            "bvc",
+            "bvs",
+            "clc",
+            "cld",
+            "cli",
+            "clv",
+            "cmp",
+            "cpx",
+            "cpy",
+            "dea",
+            "dec",
+            "dex",
+            "dey",
+            "eor",
+            "inc",
+            "ina",
+            "inx",
+            "iny",
+            "jmp",
+            "jsr",
+            "lda",
+            "ldx",
+            "ldy",
+            "lsr",
+            "nop",
+            "ora",
+            "pha",
+            "php",
+            "phx",
+            "phy",
+            "pla",
+            "plp",
+            "plx",
+            "ply",
+            "rol",
+            "ror",
+            "rti",
+            "rts",
+            "sbc",
+            "sec",
+            "sed",
+            "sei",
+            "sta",
+            "stx",
+            "sty",
+            "stz",
+            "tax",
+            "tay",
+            "trb",
+            "tsb",
+            "tsx",
+            "txa",
+            "txs",
+            "tya",
         }
 
         self.implicitopcodes = {
-            "brk", "clc", "cld", "cli", "clv", "dex", "dey", "inx", "iny", "nop",
-            "pha", "php", "phx", "phy", "pla", "plp", "plx", "ply", "rti", "rts",
-            "sec", "sed", "sei", "tax", "tay", "trb", "tsb", "tsx", "txa", "txs",
-            "tya"
+            "brk",
+            "clc",
+            "cld",
+            "cli",
+            "clv",
+            "dex",
+            "dey",
+            "inx",
+            "iny",
+            "nop",
+            "pha",
+            "php",
+            "phx",
+            "phy",
+            "pla",
+            "plp",
+            "plx",
+            "ply",
+            "rti",
+            "rts",
+            "sec",
+            "sed",
+            "sei",
+            "tax",
+            "tay",
+            "trb",
+            "tsb",
+            "tsx",
+            "txa",
+            "txs",
+            "tya",
         }
 
         self.immediateopcodes = {
-            "adc", "and", "bit", "cmp", "cpx", "cpy", "eor", "lda", "ldx",
-            "ldy", "ora", "sbc"
+            "adc",
+            "and",
+            "bit",
+            "cmp",
+            "cpx",
+            "cpy",
+            "eor",
+            "lda",
+            "ldx",
+            "ldy",
+            "ora",
+            "sbc",
         }
 
         self.accumulatoropcodes = {
-            "asl", "dea", "dec", "ina", "inc", "lsr", "rol", "ror"
+            "asl",
+            "dea",
+            "dec",
+            "ina",
+            "inc",
+            "lsr",
+            "rol",
+            "ror",
         }
 
         self.zeropageopcodes = {
-            "adc", "and", "asl", "bit", "cmp", "cpx", "cpy", "dec", "eor", "inc",
-            "lda", "ldx", "ldy", "lsr", "ora", "rol", "ror", "sbc", "sta", "stx",
-            "sty", "stz", "trb", "tsb"
+            "adc",
+            "and",
+            "asl",
+            "bit",
+            "cmp",
+            "cpx",
+            "cpy",
+            "dec",
+            "eor",
+            "inc",
+            "lda",
+            "ldx",
+            "ldy",
+            "lsr",
+            "ora",
+            "rol",
+            "ror",
+            "sbc",
+            "sta",
+            "stx",
+            "sty",
+            "stz",
+            "trb",
+            "tsb",
         }
 
         self.absoluteopcodes = {
-            "adc", "and", "asl", "bit", "cmp", "cpx", "cpy", "dec", "eor", "inc",
-            "jmp", "jsr", "lda", "ldx", "ldy", "lsr", "ora", "rol", "ror", "sbc",
-            "sta", "stx", "sty", "stz", "trb", "tsb"
+            "adc",
+            "and",
+            "asl",
+            "bit",
+            "cmp",
+            "cpx",
+            "cpy",
+            "dec",
+            "eor",
+            "inc",
+            "jmp",
+            "jsr",
+            "lda",
+            "ldx",
+            "ldy",
+            "lsr",
+            "ora",
+            "rol",
+            "ror",
+            "sbc",
+            "sta",
+            "stx",
+            "sty",
+            "stz",
+            "trb",
+            "tsb",
         }
 
         self.absolutexopcodes = {
-            "adc", "and", "asl", "bit", "cmp", "dec", "eor", "inc",
-            "lda", "lsr", "ora", "rol", "ror", "sbc",
-            "sta", "stz", "ldy"
+            "adc",
+            "and",
+            "asl",
+            "bit",
+            "cmp",
+            "dec",
+            "eor",
+            "inc",
+            "lda",
+            "lsr",
+            "ora",
+            "rol",
+            "ror",
+            "sbc",
+            "sta",
+            "stz",
+            "ldy",
         }
 
         self.absoluteyopcodes = {
-            "adc", "and", "cmp", "eor",
-            "lda", "ldx", "ora", "sbc", "sta"
+            "adc",
+            "and",
+            "cmp",
+            "eor",
+            "lda",
+            "ldx",
+            "ora",
+            "sbc",
+            "sta",
         }
 
         self.zeropagexopcodes = {
-            "adc", "and", "cmp", "eor", "lda", "dec", "bit", "asl", "ldy",
-            "ora", "sbc", "sta", "sty", "ror", "rol", "lsr", "inc", "stz"
+            "adc",
+            "and",
+            "cmp",
+            "eor",
+            "lda",
+            "dec",
+            "bit",
+            "asl",
+            "ldy",
+            "ora",
+            "sbc",
+            "sta",
+            "sty",
+            "ror",
+            "rol",
+            "lsr",
+            "inc",
+            "stz",
         }
 
         self.zeropageyopcodes = {"ldx", "stx"}
 
-        self.relativeopcodes = {"bmi", "bne", "bpl", "bra", "bvc", "bvs", "bcc", "bcs", "beq"}
+        self.relativeopcodes = {
+            "bmi",
+            "bne",
+            "bpl",
+            "bra",
+            "bvc",
+            "bvs",
+            "bcc",
+            "bcs",
+            "beq",
+        }
 
         self.zeropageindexedindirectxopcodes = {
-            "adc", "and", "cmp", "eor", "lda", "ora", "sbc", "sta"
+            "adc",
+            "and",
+            "cmp",
+            "eor",
+            "lda",
+            "ora",
+            "sbc",
+            "sta",
         }
 
         self.zeropageindexedindirectyopcodes = {
-            "adc", "and", "cmp", "eor", "lda", "ora", "sbc", "sta"
+            "adc",
+            "and",
+            "cmp",
+            "eor",
+            "lda",
+            "ora",
+            "sbc",
+            "sta",
         }
 
         self.zeropageindirectopcodes = {
-            "adc", "and", "cmp", "eor", "lda", "ora", "sbc", "sta"
+            "adc",
+            "and",
+            "cmp",
+            "eor",
+            "lda",
+            "ora",
+            "sbc",
+            "sta",
         }
 
         # Build a map of opcodes to list of modes the opcode supports.
@@ -453,68 +676,80 @@ class py6502_common(object):
     # absolute indirect       ($5000) - only JMP     ~ "absoluteindirect"
     def addrmode_length(self, addrmode):
         return {
-            'implicit': 0,
-            'immediate': 1,
-            'accumulator': 0,
-            'absolute': 2,
-            'zeropage': 1,
-            'absolutex': 2,
-            'absolutey': 2,
-            'zeropagex': 1,
-            'zeropagey': 1,
-            'relative': 1,
-            'zeropageindexedindirectx': 1,
-            'zeropageindexedindirecty': 1,
-            'absoluteindexedindirect': 2,
-            'zeropageindirect': 1,
-            'absoluteindirect': 2
+            "implicit": 0,
+            "immediate": 1,
+            "accumulator": 0,
+            "absolute": 2,
+            "zeropage": 1,
+            "absolutex": 2,
+            "absolutey": 2,
+            "zeropagex": 1,
+            "zeropagey": 1,
+            "relative": 1,
+            "zeropageindexedindirectx": 1,
+            "zeropageindexedindirecty": 1,
+            "absoluteindexedindirect": 2,
+            "zeropageindirect": 1,
+            "absoluteindirect": 2,
         }[addrmode]
-        
+
     def firstpasstext(self, thetuple):
-        (offset, linenumber, labelstring, opcode_val, lowbyte, highbyte, opcode, operand, addressmode, value, comment,
-         extrabytes) = thetuple
+        (
+            offset,
+            linenumber,
+            labelstring,
+            opcode_val,
+            lowbyte,
+            highbyte,
+            opcode,
+            operand,
+            addressmode,
+            value,
+            comment,
+            extrabytes,
+        ) = thetuple
         a = ("%d" % linenumber).ljust(4)
-        if (labelstring != None):
+        if labelstring != None:
             b = (": %s" % labelstring).ljust(10)
         else:
             b = "          "
 
-        if (opcode_val == None):
+        if opcode_val == None:
             c = "   "
         else:
-            if (opcode_val > -1):
+            if opcode_val > -1:
                 c = "%02X " % opcode_val
             else:
                 c = "?? "
 
-        if (lowbyte == None):
+        if lowbyte == None:
             d = "   "
         else:
-            if (lowbyte > -1):
+            if lowbyte > -1:
                 d = "%02X " % lowbyte
             else:
                 d = "?? "
 
-        if (highbyte == None):
+        if highbyte == None:
             e = "   "
         else:
-            if (highbyte > -1):
+            if highbyte > -1:
                 e = "%02X " % highbyte
             else:
                 e = "?? "
 
         # Print the opcode in 4 spaces
-        if (opcode == None):
+        if opcode == None:
             f = "    "
         else:
             f = opcode.ljust(4)
 
         # Either print the operand in 10 spaces or print 10 spaces
         # when there is no operand
-        if (operand == None):
+        if operand == None:
             g = "          "
         else:
-            if (len(operand) > 0):
+            if len(operand) > 0:
                 g = operand.ljust(10)
             else:
                 g = "          "
@@ -525,50 +760,62 @@ class py6502_common(object):
         return astring
 
     def secondpasstext(self, thetuple):
-        (offset, linenumber, labelstring, opcode_val, lowbyte, highbyte, opcode, operand, addressmode, value, comment,
-         extrabytes) = thetuple
+        (
+            offset,
+            linenumber,
+            labelstring,
+            opcode_val,
+            lowbyte,
+            highbyte,
+            opcode,
+            operand,
+            addressmode,
+            value,
+            comment,
+            extrabytes,
+        ) = thetuple
         a = ("%d " % linenumber).ljust(5)
-        aa = ("%04X " % offset)
+        aa = "%04X " % offset
 
         if (labelstring != None) and (labelstring != ""):
             b = (": %s:" % labelstring).ljust(10)
         else:
             b = ":         "
 
-        if (opcode_val == None):
+        if opcode_val == None:
             c = "   "
         else:
-            if (opcode_val > -1):
+            if opcode_val > -1:
                 c = "%02X " % opcode_val
             else:
                 c = "?? "
 
-        if (lowbyte == None):
+        if lowbyte == None:
             d = "   "
         else:
-            if (lowbyte > -1):
+            if lowbyte > -1:
                 d = "%02X " % lowbyte
             else:
                 d = "?? "
 
-        if (highbyte == None):
+        if highbyte == None:
             e = "   "
         else:
-            if (highbyte > -1):
+            if highbyte > -1:
                 e = "%02X " % highbyte
             else:
                 e = "?? "
 
         # Print the opcode in 4 spaces
-        if (opcode == None):
+        if opcode == None:
             f = "    "
         else:
             f = opcode.ljust(4)
 
-        if (operand == None):
+        if operand == None:
             g = "          "
         else:
-            if (len(operand) > 0):
+            if len(operand) > 0:
                 g = operand.ljust(10)
             else:
                 g = "          "
@@ -609,12 +856,18 @@ class py6502_common(object):
         opcode = self.check_opcode(opcode_anycase, linenumber)
         premode, value = self.identify_addressmodeformat(operand, linenumber)
         addressmode = self.identify_addressmode(opcode, premode, value, linenumber)
-        self.debug(3, "PARSE LINE: opcode=%s  addressmode=%s" % (str(opcode), addressmode))
+        self.debug(
+            3, "PARSE LINE: opcode=%s  addressmode=%s" % (str(opcode), addressmode)
+        )
         if (opcode != None) and (addressmode != "UNDECIDED"):
             astring = opcode + addressmode
             self.debug(3, "PARSE LINE 2 astring=%s" % astring)
             if astring in self.hexmap:
-                self.debug(3, "PARSE LINE 3 astring=%s  self.hexmap[astring]=0x%x" % (astring, self.hexmap[astring]))
+                self.debug(
+                    3,
+                    "PARSE LINE 3 astring=%s  self.hexmap[astring]=0x%x"
+                    % (astring, self.hexmap[astring]),
+                )
                 opcode_val = self.hexmap[astring]
             else:
                 opcode_val = None
@@ -622,19 +875,27 @@ class py6502_common(object):
             opcode_val = None
             astring = ""
 
-        if (self.addrmode_length(addressmode) == 0):
+        if self.addrmode_length(addressmode) == 0:
             lowbyte = None
             highbyte = None
-        elif (self.addrmode_length(addressmode) == 1) and (self.decode_value(value) != -1):
+        elif (self.addrmode_length(addressmode) == 1) and (
+            self.decode_value(value) != -1
+        ):
             lowbyte = self.decode_value(value) & 0x00FF
             highbyte = None
-        elif (self.addrmode_length(addressmode) == 2) and (self.decode_value(value) != -1):
+        elif (self.addrmode_length(addressmode) == 2) and (
+            self.decode_value(value) != -1
+        ):
             lowbyte = self.decode_value(value) & 0x00FF
             highbyte = ((self.decode_value(value) & 0xFF00) >> 8) & 0x00FF
-        elif (self.addrmode_length(addressmode) == 1) and (self.decode_value(value) == -1):
+        elif (self.addrmode_length(addressmode) == 1) and (
+            self.decode_value(value) == -1
+        ):
             lowbyte = -1
             highbyte = None
-        elif (self.addrmode_length(addressmode) == 2) and (self.decode_value(value) == -1):
+        elif (self.addrmode_length(addressmode) == 2) and (
+            self.decode_value(value) == -1
+        ):
             lowbyte = -1
             highbyte = -1
         else:
@@ -643,9 +904,9 @@ class py6502_common(object):
         offset = -1
 
         # Handle switches between little endian and big endian
-        if (opcode == "le"):
+        if opcode == "le":
             self.littleendian = True
-        if (opcode == "be"):
+        if opcode == "be":
             self.littleendian = False
 
         # interpret extra bytes from the db, dw, ddw, dqw directives.
@@ -660,9 +921,19 @@ class py6502_common(object):
             extrabytes = self.decode_extraquadwords(linenumber, thestring, operand)
 
         thetuple = (
-            offset, linenumber, labelstring, opcode_val, lowbyte, highbyte, opcode, operand, addressmode, value,
+            offset,
+            linenumber,
+            labelstring,
+            opcode_val,
+            lowbyte,
+            highbyte,
+            opcode,
+            operand,
+            addressmode,
+            value,
             comment,
-            extrabytes)
+            extrabytes,
+        )
         self.allstuff.append(thetuple)
         self.firstpasstext(thetuple)
 
@@ -670,7 +941,7 @@ class py6502_common(object):
         self.debug(2, str(self.allstuff[linenumber - 1]))
         self.debug(2, "-----------------------")
 
-    # Perform the three passes of the assembly    
+    # Perform the three passes of the assembly
     def assemble(self, lines):
         self.clear_state()
 
@@ -689,20 +960,32 @@ class py6502_common(object):
         # Add the offset to each line by counting the opcodes and operands
         for i in range(len(self.allstuff)):
             tuple = self.allstuff[i]
-            (offset, linenumber, labelstring, opcode_val, lowbyte, highbyte, opcode, operand, addressmode, value,
-             comment, extrabytes) = tuple
+            (
+                offset,
+                linenumber,
+                labelstring,
+                opcode_val,
+                lowbyte,
+                highbyte,
+                opcode,
+                operand,
+                addressmode,
+                value,
+                comment,
+                extrabytes,
+            ) = tuple
             # Handle ORG directive
-            if (opcode == "org"):
+            if opcode == "org":
                 newaddr = self.decode_value(value)
-                if (newaddr != -1):
-                    self.address = newaddr & 0x00ffff
+                if newaddr != -1:
+                    self.address = newaddr & 0x00FFFF
             offset = self.address
 
-            if (opcode_val != None):
+            if opcode_val != None:
                 self.address += 1
-            if (lowbyte != None):
+            if lowbyte != None:
                 self.address += 1
-            if (highbyte != None):
+            if highbyte != None:
                 self.address += 1
             self.address += len(extrabytes)
 
@@ -710,8 +993,19 @@ class py6502_common(object):
             if (labelstring != None) and (labelstring != ""):
                 self.symbols[labelstring] = offset
             tuple = (
-                offset, linenumber, labelstring, opcode_val, lowbyte, highbyte, opcode, operand, addressmode, value,
-                comment, extrabytes)
+                offset,
+                linenumber,
+                labelstring,
+                opcode_val,
+                lowbyte,
+                highbyte,
+                opcode,
+                operand,
+                addressmode,
+                value,
+                comment,
+                extrabytes,
+            )
             self.allstuff[i] = tuple
             self.secondpasstext(tuple)
 
@@ -728,29 +1022,58 @@ class py6502_common(object):
         self.listing = list()
         for i in range(len(self.allstuff)):
             tuple = self.allstuff[i]
-            (offset, linenumber, labelstring, opcode_val, lowbyte, highbyte, opcode, operand, addressmode, value,
-             comment, extrabytes) = tuple
+            (
+                offset,
+                linenumber,
+                labelstring,
+                opcode_val,
+                lowbyte,
+                highbyte,
+                opcode,
+                operand,
+                addressmode,
+                value,
+                comment,
+                extrabytes,
+            ) = tuple
 
             if (lowbyte == -1) and (addressmode == "relative"):
                 destination = self.symbols[value]
                 start = offset
                 delta = destination - start
-                lowbyte = delta & 0x00ff
+                lowbyte = delta & 0x00FF
                 if (delta > 127) or (delta < -128):
-                    self.warning(linenumber, "", "branch can't reach destination, delta is %d" % delta)
+                    self.warning(
+                        linenumber,
+                        "",
+                        "branch can't reach destination, delta is %d" % delta,
+                    )
             elif (lowbyte == -1) and (
-                        (addressmode in self.modeswithlowbytevalue) or (addressmode in self.modeswithhighbytevalue)):
-                if (value in self.symbols):
+                (addressmode in self.modeswithlowbytevalue)
+                or (addressmode in self.modeswithhighbytevalue)
+            ):
+                if value in self.symbols:
                     newvalue = self.symbols[value]
-                    lowbyte = newvalue & 0x00ff
+                    lowbyte = newvalue & 0x00FF
                 if (highbyte == -1) and (addressmode in self.modeswithhighbytevalue):
-                    if (value in self.symbols):
+                    if value in self.symbols:
                         newvalue = self.symbols[value]
-                        highbyte = ((newvalue & 0xff00) >> 8) & 0x00ff
+                        highbyte = ((newvalue & 0xFF00) >> 8) & 0x00FF
 
             tuple = (
-                offset, linenumber, labelstring, opcode_val, lowbyte, highbyte, opcode, operand, addressmode, value,
-                comment, extrabytes)
+                offset,
+                linenumber,
+                labelstring,
+                opcode_val,
+                lowbyte,
+                highbyte,
+                opcode,
+                operand,
+                addressmode,
+                value,
+                comment,
+                extrabytes,
+            )
             self.allstuff[i] = tuple
             line = self.secondpasstext(tuple)
             self.listing.append(line)
@@ -760,13 +1083,13 @@ class py6502_common(object):
             if (opcode_val != None) and (opcode_val != -1):
                 self.object_code[addr] = opcode_val
                 addr = addr + 1
-            if (lowbyte != None):
+            if lowbyte != None:
                 self.object_code[addr] = lowbyte
                 addr = addr + 1
-            if (highbyte != None):
+            if highbyte != None:
                 self.object_code[addr] = highbyte
                 addr = addr + 1
-            if (extrabytes != None):
+            if extrabytes != None:
                 for i in extrabytes:
                     self.object_code[addr] = i
                     addr = addr + 1
@@ -792,19 +1115,19 @@ class py6502_common(object):
         i = 0
         astring = ""
         printed_a_star = 0
-        while (i < 65536):
+        while i < 65536:
             if self.object_code[i] != -1:
                 printed_a_star = 0
                 astring = "%04X: %02X" % (i, self.object_code[i])
                 localrun = 1
                 i = i + 1
-                if (i < 65536):
+                if i < 65536:
                     nextval = self.object_code[i]
                     while (nextval != -1) and (localrun < 16):
                         astring = astring + " %02X" % self.object_code[i]
                         i = i + 1
                         localrun = localrun + 1
-                        if (i < 65536):
+                        if i < 65536:
                             nextval = self.object_code[i]
                         else:
                             nextval = -1
@@ -812,7 +1135,7 @@ class py6502_common(object):
                 else:
                     print(astring)
             else:
-                if (printed_a_star == 0):
+                if printed_a_star == 0:
                     print("*")
                     printed_a_star = 1
                 i = i + 1

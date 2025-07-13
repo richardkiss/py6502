@@ -2,6 +2,7 @@
 
 from .asm6502 import asm6502
 
+
 def go(debug=0):
     lines = list()
     lines.append("    ORG $100")
@@ -219,7 +220,7 @@ def go(debug=0):
     lines.append("       nop")
 
     a = asm6502(debug=debug)
-    (listingtext,symboltext) = a.assemble(lines)
+    (listingtext, symboltext) = a.assemble(lines)
 
     for line in listingtext:
         print(line)
@@ -228,4 +229,6 @@ def go(debug=0):
         print(line)
 
     a.print_object_code()
+
+
 go()

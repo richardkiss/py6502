@@ -7,10 +7,10 @@ import termbox
 eventdict = dict()
 with termbox.Termbox() as tb:
     finish = False
-    while finish==False:
+    while finish == False:
         event = tb.poll_event()
-        (type, ch, key, mod, w, h, x, y ) = event
-        if type==termbox.EVENT_KEY and ch=='X':
+        (type, ch, key, mod, w, h, x, y) = event
+        if type == termbox.EVENT_KEY and ch == "X":
             break
 
         if event in eventdict:
@@ -20,5 +20,4 @@ with termbox.Termbox() as tb:
         time.sleep(0.01)  # Remove this delay to make it not fail.
 
 for e in eventdict:
-    print(e,":",eventdict[e])
-
+    print(e, ":", eventdict[e])

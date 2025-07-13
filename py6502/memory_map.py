@@ -5,15 +5,19 @@ MODE_READ = 0
 MODE_WRITE = 1
 MODE_EXECUTE = 2
 
+
 class TrapException(Exception):
     """May be raised by an interceptor on access to a memory address."""
+
     def __init__(self, address, access_mode):
         self.address = address
         self.access_mode = access_mode
 
     def __str__(self):
         return "Trap when accessing memory location $%X with mode %d" % (
-            self.address, self.access_mode)
+            self.address,
+            self.access_mode,
+        )
 
 
 class MemoryMap(object):
@@ -39,8 +43,9 @@ class MemoryMap(object):
             self.default_interceptor = default_interceptor
 
     def TrapInterceptor(self, address, access_mode, _):
-        if self._memory_map[address] == -1 and (access_mode == MODE_READ or access_mode == MODE_EXECUTE):
-
+        if self._memory_map[address] == -1 and (
+            access_mode == MODE_READ or access_mode == MODE_EXECUTE
+        ):
             print(self.cpu.show_state())
             print(self.Dump(self.cpu.pc, 0x3))
             raise TrapException(address, access_mode)
@@ -48,10 +53,10 @@ class MemoryMap(object):
     def InitializeMemory(self, address, data, interceptor=None):
         for idx, value in enumerate(data):
             # Bug: https://github.com/dj-on-github/py6502/issues/6
-            # Fix this by choosing to skip assigning data from object_code if it is untouched. 
-            #if value < 0 or value > 255:
+            # Fix this by choosing to skip assigning data from object_code if it is untouched.
+            # if value < 0 or value > 255:
             #    raise ValueError
-            if (value >= 0 and value < 256):
+            if value >= 0 and value < 256:
                 self._memory_map[address + idx] = value
             if interceptor:
                 self.Intercept(address + idx, interceptor)
@@ -63,21 +68,21 @@ class MemoryMap(object):
     def Dump(self, address=0x0, length=0x10000):
         lines = []
         line = []
-        for i, value in enumerate(self._memory_map[address:address+length]):
+        for i, value in enumerate(self._memory_map[address : address + length]):
             if i % 16 == 0:
-                line.append('$%04X :' % (address + i))
+                line.append("$%04X :" % (address + i))
             if value == -1:
-                line.append('--')
+                line.append("--")
             else:
-                line.append('%02X' % value)
+                line.append("%02X" % value)
             if (i + 1) % 16 == 0:
-                lines.append(' '.join(line))
+                lines.append(" ".join(line))
                 line = []
 
         if line:
-            lines.append(' '.join(line))
+            lines.append(" ".join(line))
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     def _MaybeIntercept(self, address, access_mode):
         try:
@@ -106,5 +111,3 @@ class MemoryMap(object):
     def Execute(self, address, trace=True):
         self._MaybeIntercept(address, MODE_EXECUTE)
         return self._memory_map[address]
-
-

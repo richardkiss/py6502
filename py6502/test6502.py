@@ -307,10 +307,16 @@ end:   bpl vals
     print("SIMULATION START")
     print()
     # Print a header for the simulator/disassembler output
-    print("LABEL      ADDR HEX      INSTR".ljust(status_indent) + " PC   A  X  Y  SP   Status")
+    print(
+        "LABEL      ADDR HEX      INSTR".ljust(status_indent)
+        + " PC   A  X  Y  SP   Status"
+    )
 
     # Print the initial state
-    print(" ".ljust(status_indent) + " %04x %02x %02x %02x %04x %02x" % (s.pc, s.a, s.x, s.y, s.sp, s.cc))
+    print(
+        " ".ljust(status_indent)
+        + " %04x %02x %02x %02x %04x %02x" % (s.pc, s.a, s.x, s.y, s.sp, s.cc)
+    )
 
     # Execute 200 instructions
     for i in range(200):
@@ -321,9 +327,13 @@ end:   bpl vals
         s.execute()
 
         # Print out the disassembled instruction followed by the simulator state
-        print(distxt.ljust(status_indent) + " %04x %02x %02x %02x %04x %02x" % (s.pc, s.a, s.x, s.y, s.sp, s.cc))
+        print(
+            distxt.ljust(status_indent)
+            + " %04x %02x %02x %02x %04x %02x" % (s.pc, s.a, s.x, s.y, s.sp, s.cc)
+        )
 
     print(s.memory_map.Dump())
+
 
 if __name__ == "__main__":
     main()

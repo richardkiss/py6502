@@ -6,9 +6,8 @@
 
 from asm6502 import asm6502
 
-f = open("Krakowicz_examples.asm",'r')
+f = open("Krakowicz_examples.asm", "r")
 lines = f.readlines()
 
 a = asm6502()
 a.assemble(lines)
-

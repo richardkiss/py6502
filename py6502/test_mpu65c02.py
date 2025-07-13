@@ -39,6 +39,7 @@ import sys
 from . import test_shim
 from .test_mpu6502 import Common6502Tests
 
+
 class MPUTests(unittest.TestCase, Common6502Tests):
     """CMOS 65C02 Tests"""
 
@@ -144,7 +145,7 @@ class MPUTests(unittest.TestCase, Common6502Tests):
     def test_adc_bcd_off_zp_ind_overflow_set_no_carry_7f_plus_01(self):
         mpu = self._make_mpu()
         mpu.p &= ~(mpu.CARRY)
-        mpu.a = 0x7f
+        mpu.a = 0x7F
         # $0000 ADC ($0010)
         # $0010 Vector to $ABCD
         self._write(mpu.memory, 0x0000, (0x72, 0x10))
@@ -166,7 +167,7 @@ class MPUTests(unittest.TestCase, Common6502Tests):
         mpu.memory[0xABCD] = 0xFF
         mpu.step()
         self.assertEqual(0x0002, mpu.pc)
-        self.assertEqual(0x7f, mpu.a)
+        self.assertEqual(0x7F, mpu.a)
         self.assertEqual(mpu.OVERFLOW, mpu.p & mpu.OVERFLOW)
 
     def test_adc_bcd_off_zp_ind_overflow_set_on_40_plus_40(self):
@@ -321,7 +322,7 @@ class MPUTests(unittest.TestCase, Common6502Tests):
         mpu = self._make_mpu()
         mpu.p |= mpu.NEGATIVE | mpu.OVERFLOW
         # $0000 BIT #$FF
-        self._write(mpu.memory, 0x0000, (0x89, 0xff))
+        self._write(mpu.memory, 0x0000, (0x89, 0xFF))
         mpu.a = 0x00
         mpu.step()
         self.assertEqual(mpu.NEGATIVE, mpu.p & mpu.NEGATIVE)
@@ -484,7 +485,7 @@ class MPUTests(unittest.TestCase, Common6502Tests):
         mpu.a = 0x42
         # $0000 AND ($10)
         # $0010 Vector to $ABCD
-        self._write(mpu.memory, 0x0000, (0xd2, 0x10))
+        self._write(mpu.memory, 0x0000, (0xD2, 0x10))
         self._write(mpu.memory, 0x0010, (0xCD, 0xAB))
         mpu.memory[0xABCD] = 0x42
         mpu.step()
@@ -499,7 +500,7 @@ class MPUTests(unittest.TestCase, Common6502Tests):
         mpu.a = 0x43
         # $0000 AND ($10)
         # $0010 Vector to $ABCD
-        self._write(mpu.memory, 0x0000, (0xd2, 0x10))
+        self._write(mpu.memory, 0x0000, (0xD2, 0x10))
         self._write(mpu.memory, 0x0010, (0xCD, 0xAB))
         mpu.memory[0xABCD] = 0x42
         mpu.step()
@@ -580,7 +581,7 @@ class MPUTests(unittest.TestCase, Common6502Tests):
         mpu = self._make_mpu()
         self._write(mpu.memory, 0x10FF, (0xCD, 0xAB))
         # $0000 JMP ($10FF)
-        self._write(mpu.memory, 0, (0x6c, 0xFF, 0x10))
+        self._write(mpu.memory, 0, (0x6C, 0xFF, 0x10))
         mpu.step()
         self.assertEqual(0xABCD, mpu.pc)
         # self.assertEqual(6, mpu.processorCycles)
@@ -703,8 +704,8 @@ class MPUTests(unittest.TestCase, Common6502Tests):
         mpu.sp = 0xFE
         mpu.step()
         self.assertEqual(0x0001, mpu.pc)
-        self.assertEqual(0xAB,   mpu.x)
-        self.assertEqual(0xFF,   mpu.sp)
+        self.assertEqual(0xAB, mpu.x)
+        self.assertEqual(0xFF, mpu.sp)
         # self.assertEqual(4, mpu.processorCycles)
 
     # PLY
@@ -717,8 +718,8 @@ class MPUTests(unittest.TestCase, Common6502Tests):
         mpu.sp = 0xFE
         mpu.step()
         self.assertEqual(0x0001, mpu.pc)
-        self.assertEqual(0xAB,   mpu.y)
-        self.assertEqual(0xFF,   mpu.sp)
+        self.assertEqual(0xAB, mpu.y)
+        self.assertEqual(0xFF, mpu.sp)
         # self.assertEqual(4, mpu.processorCycles)
 
     # RMBx opcodes are only on Rockwell and WDC 65C02s
@@ -1207,7 +1208,7 @@ class MPUTests(unittest.TestCase, Common6502Tests):
         mpu = self._make_mpu()
         mpu.memory[0x0032] = 0x88
         # #0000 STZ $32
-        mpu.memory[0x0000:0x0000 + 2] = [0x64, 0x32]
+        mpu.memory[0x0000 : 0x0000 + 2] = [0x64, 0x32]
         self.assertEqual(0x88, mpu.memory[0x0032])
         mpu.step()
         self.assertEqual(0x00, mpu.memory[0x0032])
@@ -1220,7 +1221,7 @@ class MPUTests(unittest.TestCase, Common6502Tests):
         mpu = self._make_mpu()
         mpu.memory[0x0032] = 0x88
         # $0000 STZ $32,X
-        mpu.memory[0x0000:0x0000 + 2] = [0x74, 0x32]
+        mpu.memory[0x0000 : 0x0000 + 2] = [0x74, 0x32]
         self.assertEqual(0x88, mpu.memory[0x0032])
         mpu.step()
         self.assertEqual(0x00, mpu.memory[0x0032])
@@ -1233,7 +1234,7 @@ class MPUTests(unittest.TestCase, Common6502Tests):
         mpu = self._make_mpu()
         mpu.memory[0xFEED] = 0x88
         # $0000 STZ $FEED
-        mpu.memory[0x0000:0x0000 + 3] = [0x9C, 0xED, 0xFE]
+        mpu.memory[0x0000 : 0x0000 + 3] = [0x9C, 0xED, 0xFE]
         self.assertEqual(0x88, mpu.memory[0xFEED])
         mpu.step()
         self.assertEqual(0x00, mpu.memory[0xFEED])
@@ -1247,7 +1248,7 @@ class MPUTests(unittest.TestCase, Common6502Tests):
         mpu.memory[0xFEED] = 0x88
         mpu.x = 0x0D
         # $0000 STZ $FEE0,X
-        mpu.memory[0x0000:0x0000 + 3] = [0x9E, 0xE0, 0xFE]
+        mpu.memory[0x0000 : 0x0000 + 3] = [0x9E, 0xE0, 0xFE]
         self.assertEqual(0x88, mpu.memory[0xFEED])
         self.assertEqual(0x0D, mpu.x)
         mpu.step()
@@ -1454,5 +1455,6 @@ def test_suite():
     loader = unittest.TestLoader()
     return loader.loadTestsFromModule(sys.modules[__name__])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

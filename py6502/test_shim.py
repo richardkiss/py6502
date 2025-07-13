@@ -1,5 +1,6 @@
 from . import sim6502
 
+
 class Shim6502(object):
     """Shim between the API expected by py65's MPU class and sim6502 class"""
 
@@ -93,4 +94,3 @@ class MemoryShim(object):
 
     def __len__(self):
         return len(self.memory_map._memory_map)
-
