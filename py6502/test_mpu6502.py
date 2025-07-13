@@ -32,8 +32,9 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-import unittest
 import sys
+import unittest
+
 from . import test_shim
 
 # TODO: tests for all the bugs here? http://forum.6502.org/viewtopic.php?t=770

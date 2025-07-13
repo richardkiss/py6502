@@ -1,9 +1,8 @@
 #!/usr/bin/python
-# -*- encoding: utf-8 -*-
+
+from inspect import currentframe, getframeinfo
 
 import termbox
-import inspect
-from inspect import currentframe, getframeinfo
 
 cf = currentframe()
 filename = getframeinfo(cf).filename
@@ -27,7 +26,7 @@ import logging
 # dj@deadhat.com
 
 
-class viewplane(object):
+class viewplane:
     def __init__(self, width, height, fg=termbox.WHITE, bg=termbox.BLACK):
         self.iwidth = width
         self.iheight = height

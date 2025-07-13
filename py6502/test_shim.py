@@ -1,7 +1,7 @@
 from . import sim6502
 
 
-class Shim6502(object):
+class Shim6502:
     """Shim between the API expected by py65's MPU class and sim6502 class"""
 
     # processor flags
@@ -81,7 +81,7 @@ class Shim6502(object):
         self.mpu.pc = value
 
 
-class MemoryShim(object):
+class MemoryShim:
     def __init__(self, memory_map):
         self.memory_map = memory_map
 

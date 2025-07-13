@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-from . import asm6502
-from . import dis6502
-from . import sim6502
+from . import asm6502, dis6502, sim6502
 
 
 def main(debug=0):

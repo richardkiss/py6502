@@ -16,7 +16,7 @@
 # absolute indirect       ($5000) - only JMP     ~ "absoluteindirect"
 
 
-class py6502_common(object):
+class py6502_common:
     def __init__(self):
         # Build the opcode type tables
 

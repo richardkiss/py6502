@@ -1,39 +1,34 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8 -*-
 
 import argparse
-import sys
-import os
-import binascii
 import copy
 import logging
+import sys
 
 logging.basicConfig(filename="py6502_debugger.log", level=logging.DEBUG)
 logging.info("Staring Py6502 Debugger")
 
 
 # The assembler, disassembler and simulator libraries
-from .asm6502 import asm6502
-from .dis6502 import dis6502
-from .sim6502 import sim6502
-
 # The termbox library for writing to the screen
 import termbox
 
 # temrbox_util adds a curses like interface to termbox
-from termbox_util import termbox_util
-from termbox_util import termbox_editableline
-from termbox_util import hex_validator
-from termbox_util import integer_validator
-from termbox_util import text_validator
-from termbox_util import decimal_validator
-
 # Also get the virtual viewplane support
 # Allows virtual text screen that can be displayed
 # on a real screen. Good for scrolling through lists.
 # Have a static list (like a memory view) and move
 # the viewport.
-from termbox_util import viewplane
+from termbox_util import (
+    hex_validator,
+    termbox_editableline,
+    termbox_util,
+    viewplane,
+)
+
+from .asm6502 import asm6502
+from .dis6502 import dis6502
+from .sim6502 import sim6502
 
 leftwidth = 40
 memory_selected = True
@@ -743,11 +738,11 @@ f = open(str(options.filename))
 # Read the file
 try:
     lines = f.readlines()
-except IOError:
+except OSError:
     sys.stderr.write("ERROR: File Error")
     try:
         sys.stderr.close()
-    except IOError:
+    except OSError:
         pass
     quit()
 

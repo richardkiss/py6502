@@ -34,8 +34,9 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-import unittest
 import sys
+import unittest
+
 from . import test_shim
 from .test_mpu6502 import Common6502Tests
 

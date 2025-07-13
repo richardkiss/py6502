@@ -20,7 +20,7 @@ class TrapException(Exception):
         )
 
 
-class MemoryMap(object):
+class MemoryMap:
     # Don't intercept accesses to uninitialized memory
     NONE_INTERCEPTOR = 0
     # Raise TrapException on read/execute access to uninitialized memory

@@ -1,7 +1,7 @@
 from . import memory_map
 
 
-class Flags(object):
+class Flags:
     # processor flags
     NEGATIVE = 128
     OVERFLOW = 64
@@ -19,7 +19,7 @@ class Flags(object):
 #
 # The 65C02 Simulator
 #
-class sim6502(object):
+class sim6502:
     def __init__(self, object_code=None, address=0x0, symbols=None):
         self.pc = 0x0000
         self.a = 0x00

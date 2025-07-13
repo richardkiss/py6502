@@ -19,6 +19,4 @@ __author__ = "David Johnston"
 __email__ = "dj@deadhat.com"
 
 # Import main modules for convenience
-from . import asm6502
-from . import sim6502
-from . import dis6502
+from . import asm6502, dis6502, sim6502
