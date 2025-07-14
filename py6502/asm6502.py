@@ -1355,6 +1355,21 @@ class asm6502:
             return astring + "\n" + bytestring
         return astring
 
+    def decode_offset(self, value):
+        # Accepts '+$10' or '-$30'
+        if value[0] in ("+", "-") and value[1] == "$":
+            sign = 1 if value[0] == "+" else -1
+            num = int(value[2:], 16)
+            offset = sign * num
+            return offset & 0xFF
+        # fallback: try decimal
+        if value[0] in ("+", "-") and value[1:].isdigit():
+            sign = 1 if value[0] == "+" else -1
+            num = int(value[1:])
+            offset = sign * num
+            return offset & 0xFF
+        return None
+
     # Separate out the label, opcode, operand and comment fields.
     # Identify the address mode as we go along
     # The results end up in self.allstuff in a tuple per entry
@@ -1387,7 +1402,10 @@ class asm6502:
             opcode_val = None
             astring = ""
 
-        if self.addrmode_length(addressmode) == 0:
+        if addressmode == "relative" and premode == "offset":
+            lowbyte = self.decode_offset(value)
+            highbyte = None
+        elif self.addrmode_length(addressmode) == 0:
             lowbyte = None
             highbyte = None
         elif (self.addrmode_length(addressmode) == 1) and (
