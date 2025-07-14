@@ -108,15 +108,13 @@ Examples:
                     min_addr = min(used_addresses)
                     max_addr = max(used_addresses)
 
+                    # Only write the bytes that were actually assembled (no padding)
                     with open(binary_path, "wb") as f:
-                        # Write only the used memory range
                         for address in range(min_addr, max_addr + 1):
                             if assembler.object_code[address] != -1:
                                 f.write(bytes([assembler.object_code[address]]))
-                            else:
-                                f.write(b"\x00")
                     print(
-                        f"Binary file written to: {binary_path} (addresses ${min_addr:04X}-${max_addr:04X})"
+                        f"Binary file written to: {binary_path} (addresses ${min_addr:04X}-${max_addr:04X}, length {max_addr - min_addr + 1})"
                     )
                 else:
                     print("No object code generated, skipping binary output.")

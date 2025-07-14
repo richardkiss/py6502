@@ -198,8 +198,13 @@ class asm6502:
             or (thestring[0] == "&")
             or (thestring[0] in self.decimal_digits)
         ):
-            premode = "number"
-            value = thestring
+            # Check for .a suffix
+            if thestring.endswith(".a"):
+                premode = "number_a"
+                value = thestring[:-2]
+            else:
+                premode = "number"
+                value = thestring
         elif (thestring[0] in self.letters) and (
             (thestring != "A") or (thestring != "a")
         ):
@@ -258,6 +263,8 @@ class asm6502:
     #
     # names are numbers..
     def identify_addressmode(self, opcode, premode, value, linenumber):
+        if premode == "number_a":
+            return "absolute"
         if (opcode in self.implicitopcodes) and (premode == "nothing"):
             return "implicit"
         if (opcode in self.immediateopcodes) and (premode == "immediate"):
@@ -488,6 +495,10 @@ class asm6502:
         return newlist
 
     def decode_value(self, s):
+        # Strip .a suffix if present
+        if s.endswith(".a"):
+            s = s[:-2]
+
         if s[0] == "$":
             ns = int(s[1:], 16)
             return ns

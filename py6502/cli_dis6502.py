@@ -54,6 +54,11 @@ Examples:
         help="Output format (default: asm)",
     )
     parser.add_argument("--symbols", help="Symbol file to use for labels")
+    parser.add_argument(
+        "--reassemble",
+        action="store_true",
+        help="Output in re-assemblable format (compatible with py6502 assembler)",
+    )
 
     args = parser.parse_args(argv)
 
@@ -143,7 +148,9 @@ Examples:
 
         if args.format in ["asm", "both"]:
             # Generate assembly listing
-            for line in disassembler.disassemble_region(args.start, length):
+            for line in disassembler.disassemble_region(
+                args.start, length, reassemble=args.reassemble
+            ):
                 lines.append(line)
 
         if args.format == "hex":

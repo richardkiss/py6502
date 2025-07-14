@@ -118,9 +118,23 @@ The assembler defaults to little endian.
 Prefixes
 --------
 
+
 $ for hex. $10 = 16
 @ for octal. @10 = 8
 & for a label pointer. &labelname = the 16 bit address of the label, only works with DW.
+
+Explicit Absolute Addressing for Zero Page (.a Suffix)
+-----------------------------------------------------
+By default, operands in the zero page (e.g., $00-$FF) are assembled using zero page addressing for optimal code size and cycle count.
+However, for round-trip fidelity (ensuring that disassembly and reassembly produce identical binaries), you may need to force absolute addressing for zero page values.
+
+To do this, append the `.a` suffix to the operand:
+
+    sta $00.a      ; store to $0000 using absolute mode (3 bytes)
+    lda $10.a,x    ; load from $0010,X using absolute mode (3 bytes)
+    ldy $20.a,y    ; load Y from $0020,Y using absolute mode (3 bytes)
+
+The disassembler will emit `.a` for absolute zero-page instructions in reassemble mode, ensuring round-trip compatibility.
 
 Labels
 ------

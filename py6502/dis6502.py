@@ -297,7 +297,7 @@ class dis6502:
         self.hexcodes[0xEF] = ("", "")
         self.hexcodes[0xFF] = ("", "")
 
-    def disassemble_line(self, address):
+    def disassemble_line(self, address, reassemble=False):
         # print "DISASSEMBLER ADDR: %04x" % address
         opcode_hex = self.object_code[address]
         operandl = self.object_code[(address + 1) % 65536]
@@ -310,14 +310,18 @@ class dis6502:
         opcode, addrmode = self.hexcodes[opcode_hex]
         # print "DISASSEMBLER OPCD: %02x" % opcode_hex
         # print "DISASSMBLER OPCD TXT:"+str(opcode)+" "+str(addrmode)
-        if address in self.labels:
-            label = (self.labels[address] + ":").ljust(10)
-        else:
-            label = " " * 10
-
+        label = (
+            (self.labels[address] + ":").ljust(10)
+            if address in self.labels
+            else " " * 10
+        )
         addr_text = f"{address:04x} "
-
-        # Format the operand based on the addressmode
+        comment = ""
+        branch_target = None
+        if reassemble:
+            label = ""
+            comment = " ; " + addr_text
+            addr_text = ""
         length = 1
         if addrmode == "zeropageindexedindirectx":
             operandtext = f"(${operand8:02x},x)"
@@ -341,10 +345,16 @@ class dis6502:
             operandtext = f"#${operand8:02x}"
             length = 2
         elif addrmode == "absolutey":
-            operandtext = f"${operand16:04x},y"
+            if reassemble and operand16 <= 0xFF:
+                operandtext = f"${operand16:02x}.a,y"
+            else:
+                operandtext = f"${operand16:04x},y"
             length = 3
         elif addrmode == "absolute":
-            operandtext = f"${operand16:04x}"
+            if reassemble and operand16 <= 0xFF:
+                operandtext = f"${operand16:02x}.a"
+            else:
+                operandtext = f"${operand16:04x}"
             length = 3
         elif addrmode == "absoluteindirect":
             operandtext = f"(${operand16:04x})"
@@ -353,20 +363,23 @@ class dis6502:
             operandtext = f"(${operand16:04x},x)"
             length = 3
         elif addrmode == "absolutex":
-            operandtext = f"${operand16:04x},x"
+            if reassemble and operand16 <= 0xFF:
+                operandtext = f"[{operand16:02x}],x"
+            else:
+                operandtext = f"${operand16:04x},x"
             length = 3
         elif addrmode == "indirect":
             operandtext = f"(${operand16:04x})"
             length = 3
         elif addrmode == "relative":
-            if operand8 < 128:
-                operandtext = f"+${operand8:02x}"
+            offset = operand8 if operand8 < 128 else operand8 - 256
+            if offset < 0:
+                operandtext = f"-${-offset:02x}"
             else:
-                offset = (operand8 & 0x7F) - 128
-
-                offset = -offset
-                operandtext = f"-${offset:02x}"
+                operandtext = f"+${offset:02x}"
             length = 2
+            if reassemble:
+                branch_target = address + 2 + offset
         elif addrmode == "accumulator":
             operandtext = "A"
             length = 1
@@ -389,15 +402,23 @@ class dis6502:
             binary_text = f"{opcode_hex:02x} {operandl:02x}    "
         else:
             binary_text = f"{opcode_hex:02x} {operandl:02x} {operandh:02x} "
-
-        the_text = label + " " + addr_text + binary_text
-        the_text += opcode.ljust(5)
-        the_text += operandtext
+        if reassemble:
+            binary_text = ""
+        the_text = label + " " + addr_text + binary_text + opcode.ljust(5) + operandtext
+        if reassemble:
+            pad = 12 - len(the_text)
+            the_text += " " * pad + comment
+            if branch_target is not None:
+                the_text += f" => {branch_target:04x}"
         return (the_text, length)
 
-    def disassemble_region(self, address, region_length):
+    def disassemble_region(self, address, region_length, reassemble=False):
+        if reassemble:
+            yield f" org ${address:04x}"
         current_address = address
         while current_address < address + region_length:
-            (line, length) = self.disassemble_line(current_address)
+            (line, length) = self.disassemble_line(
+                current_address, reassemble=reassemble
+            )
             yield line
             current_address += length
