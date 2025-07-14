@@ -858,9 +858,7 @@ class py6502_common:
         opcode = self.check_opcode(opcode_anycase, linenumber)
         premode, value = self.identify_addressmodeformat(operand, linenumber)
         addressmode = self.identify_addressmode(opcode, premode, value, linenumber)
-        self.debug(
-            3, f"PARSE LINE: opcode={str(opcode)}  addressmode={addressmode}"
-        )
+        self.debug(3, f"PARSE LINE: opcode={str(opcode)}  addressmode={addressmode}")
         if (opcode is not None) and (addressmode != "UNDECIDED"):
             astring = opcode + addressmode
             self.debug(3, f"PARSE LINE 2 astring={astring}")

@@ -23,7 +23,7 @@ class TestCLIAssembler:
     @pytest.fixture
     def sample_asm_file(self):
         """Create a temporary assembly file for testing."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.asm', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".asm", delete=False) as f:
             f.write("""
     ORG $0200
 start:
@@ -37,8 +37,8 @@ start:
 
     def test_assemble_basic_file(self, sample_asm_file):
         """Test basic assembly functionality."""
-        with tempfile.NamedTemporaryFile(suffix='.hex', delete=False) as output:
-            result = cli_asm6502.main([sample_asm_file, '-o', output.name])
+        with tempfile.NamedTemporaryFile(suffix=".hex", delete=False) as output:
+            result = cli_asm6502.main([sample_asm_file, "-o", output.name])
 
             assert result == 0
             assert os.path.exists(output.name)
@@ -47,14 +47,14 @@ start:
             with open(output.name) as f:
                 content = f.read()
                 assert len(content) > 0
-                assert ':' in content  # Intel hex format marker
+                assert ":" in content  # Intel hex format marker
 
             os.unlink(output.name)
 
     def test_assemble_with_listing(self, sample_asm_file):
         """Test assembly with listing generation."""
-        with tempfile.NamedTemporaryFile(suffix='.lst', delete=False) as listing:
-            result = cli_asm6502.main([sample_asm_file, '--listing', listing.name])
+        with tempfile.NamedTemporaryFile(suffix=".lst", delete=False) as listing:
+            result = cli_asm6502.main([sample_asm_file, "--listing", listing.name])
 
             assert result == 0
             assert os.path.exists(listing.name)
@@ -62,15 +62,15 @@ start:
             # Check listing content
             with open(listing.name) as f:
                 content = f.read()
-                assert 'lda #$55' in content
-                assert 'start:' in content
+                assert "lda #$55" in content
+                assert "start:" in content
 
             os.unlink(listing.name)
 
     def test_assemble_with_symbols(self, sample_asm_file):
         """Test assembly with symbol table generation."""
-        with tempfile.NamedTemporaryFile(suffix='.sym', delete=False) as symbols:
-            result = cli_asm6502.main([sample_asm_file, '--symbols', symbols.name])
+        with tempfile.NamedTemporaryFile(suffix=".sym", delete=False) as symbols:
+            result = cli_asm6502.main([sample_asm_file, "--symbols", symbols.name])
 
             assert result == 0
             assert os.path.exists(symbols.name)
@@ -78,14 +78,14 @@ start:
             # Check symbol content
             with open(symbols.name) as f:
                 content = f.read()
-                assert 'start' in content
+                assert "start" in content
 
             os.unlink(symbols.name)
 
     def test_assemble_binary_output(self, sample_asm_file):
         """Test binary output generation."""
-        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as binary:
-            result = cli_asm6502.main([sample_asm_file, '-b', binary.name])
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as binary:
+            result = cli_asm6502.main([sample_asm_file, "-b", binary.name])
 
             assert result == 0
             assert os.path.exists(binary.name)
@@ -97,14 +97,14 @@ start:
 
     def test_assemble_nonexistent_file(self):
         """Test handling of non-existent input file."""
-        result = cli_asm6502.main(['nonexistent.asm'])
+        result = cli_asm6502.main(["nonexistent.asm"])
         assert result == 1
 
     def teardown_method(self):
         """Clean up temporary files."""
         # Clean up any remaining temp files
-        for f in os.listdir('.'):
-            if f.endswith(('.hex', '.lst', '.sym', '.bin')) and f.startswith('tmp'):
+        for f in os.listdir("."):
+            if f.endswith((".hex", ".lst", ".sym", ".bin")) and f.startswith("tmp"):
                 try:
                     os.unlink(f)
                 except OSError:
@@ -117,7 +117,7 @@ class TestCLISimulator:
     @pytest.fixture
     def sample_asm_file(self):
         """Create a temporary assembly file for testing."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.asm', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".asm", delete=False) as f:
             f.write("""
     ORG $0200
     LDA #$42
@@ -129,18 +129,20 @@ class TestCLISimulator:
 
     def test_simulate_basic(self, sample_asm_file):
         """Test basic simulation."""
-        result = cli_sim6502.main([sample_asm_file, '--steps', '10'])
+        result = cli_sim6502.main([sample_asm_file, "--steps", "10"])
         assert result == 0
 
     def test_simulate_with_start_address(self, sample_asm_file):
         """Test simulation with custom start address."""
-        result = cli_sim6502.main([sample_asm_file, '-s', '0x0200', '--steps', '5'])
+        result = cli_sim6502.main([sample_asm_file, "-s", "0x0200", "--steps", "5"])
         assert result == 0
 
     def test_simulate_with_trace(self, sample_asm_file):
         """Test simulation with trace file."""
-        with tempfile.NamedTemporaryFile(suffix='.trace', delete=False) as trace:
-            result = cli_sim6502.main([sample_asm_file, '--trace', trace.name, '--steps', '5'])
+        with tempfile.NamedTemporaryFile(suffix=".trace", delete=False) as trace:
+            result = cli_sim6502.main(
+                [sample_asm_file, "--trace", trace.name, "--steps", "5"]
+            )
 
             assert result == 0
             assert os.path.exists(trace.name)
@@ -148,19 +150,19 @@ class TestCLISimulator:
             # Check trace file content
             with open(trace.name) as f:
                 content = f.read()
-                assert 'Step' in content
-                assert 'PC' in content
+                assert "Step" in content
+                assert "PC" in content
 
             os.unlink(trace.name)
 
     def test_simulate_debug_mode(self, sample_asm_file):
         """Test simulation in debug mode."""
-        result = cli_sim6502.main([sample_asm_file, '-d', '--steps', '3'])
+        result = cli_sim6502.main([sample_asm_file, "-d", "--steps", "3"])
         assert result == 0
 
     def test_simulate_nonexistent_file(self):
         """Test handling of non-existent input file."""
-        result = cli_sim6502.main(['nonexistent.asm'])
+        result = cli_sim6502.main(["nonexistent.asm"])
         assert result == 1
 
 
@@ -170,7 +172,7 @@ class TestCLIDisassembler:
     @pytest.fixture
     def sample_binary_file(self):
         """Create a temporary binary file for testing."""
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.bin', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".bin", delete=False) as f:
             # Write some 6502 opcodes: LDA #$42, STA $10, BRK
             f.write(bytes([0xA9, 0x42, 0x85, 0x10, 0x00]))
             return f.name
@@ -182,23 +184,23 @@ class TestCLIDisassembler:
 
     def test_disassemble_with_start_address(self, sample_binary_file):
         """Test disassembly with custom start address."""
-        result = cli_dis6502.main([sample_binary_file, '-s', '0x1000'])
+        result = cli_dis6502.main([sample_binary_file, "-s", "0x1000"])
         assert result == 0
 
     def test_disassemble_hex_format(self, sample_binary_file):
         """Test disassembly in hex format."""
-        result = cli_dis6502.main([sample_binary_file, '--format', 'hex'])
+        result = cli_dis6502.main([sample_binary_file, "--format", "hex"])
         assert result == 0
 
     def test_disassemble_both_formats(self, sample_binary_file):
         """Test disassembly in both assembly and hex formats."""
-        result = cli_dis6502.main([sample_binary_file, '--format', 'both'])
+        result = cli_dis6502.main([sample_binary_file, "--format", "both"])
         assert result == 0
 
     def test_disassemble_with_output_file(self, sample_binary_file):
         """Test disassembly to output file."""
-        with tempfile.NamedTemporaryFile(suffix='.lst', delete=False) as output:
-            result = cli_dis6502.main([sample_binary_file, '-o', output.name])
+        with tempfile.NamedTemporaryFile(suffix=".lst", delete=False) as output:
+            result = cli_dis6502.main([sample_binary_file, "-o", output.name])
 
             assert result == 0
             assert os.path.exists(output.name)
@@ -212,12 +214,12 @@ class TestCLIDisassembler:
 
     def test_disassemble_with_length_limit(self, sample_binary_file):
         """Test disassembly with length limit."""
-        result = cli_dis6502.main([sample_binary_file, '--length', '3'])
+        result = cli_dis6502.main([sample_binary_file, "--length", "3"])
         assert result == 0
 
     def test_disassemble_nonexistent_file(self):
         """Test handling of non-existent input file."""
-        result = cli_dis6502.main(['nonexistent.bin'])
+        result = cli_dis6502.main(["nonexistent.bin"])
         assert result == 1
 
 
@@ -227,7 +229,7 @@ class TestCLIDebugger:
     @pytest.fixture
     def sample_asm_file(self):
         """Create a temporary assembly file for testing."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.asm', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".asm", delete=False) as f:
             f.write("""
     ORG $0200
     LDA #$42
@@ -239,18 +241,18 @@ class TestCLIDebugger:
     def test_debugger_simple_mode(self, sample_asm_file):
         """Test debugger in simple mode."""
         # Note: This will likely require mocking user input or using --simple flag
-        result = cli_debugger.main([sample_asm_file, '--simple'])
+        result = cli_debugger.main([sample_asm_file, "--simple"])
         # The debugger might return 0 or 1 depending on implementation
         assert result in [0, 1]
 
     def test_debugger_with_start_address(self, sample_asm_file):
         """Test debugger with custom start address."""
-        result = cli_debugger.main([sample_asm_file, '--simple', '-s', '0x0200'])
+        result = cli_debugger.main([sample_asm_file, "--simple", "-s", "0x0200"])
         assert result in [0, 1]
 
     def test_debugger_nonexistent_file(self):
         """Test handling of non-existent input file."""
-        result = cli_debugger.main(['nonexistent.asm'])
+        result = cli_debugger.main(["nonexistent.asm"])
         assert result == 1
 
 
@@ -260,7 +262,9 @@ class TestCLIIntegration:
     def test_assemble_then_simulate(self):
         """Test assembling a file and then simulating it."""
         # Create assembly file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.asm', delete=False) as asm_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".asm", delete=False
+        ) as asm_file:
             asm_file.write("""
     ORG $0200
 start:
@@ -275,13 +279,13 @@ start:
 
         try:
             # Assemble the file
-            with tempfile.NamedTemporaryFile(suffix='.hex', delete=False) as hex_file:
-                assemble_result = cli_asm6502.main([asm_file_path, '-o', hex_file.name])
+            with tempfile.NamedTemporaryFile(suffix=".hex", delete=False) as hex_file:
+                assemble_result = cli_asm6502.main([asm_file_path, "-o", hex_file.name])
                 assert assemble_result == 0
                 assert os.path.exists(hex_file.name)
 
             # Simulate the file
-            simulate_result = cli_sim6502.main([asm_file_path, '--steps', '10'])
+            simulate_result = cli_sim6502.main([asm_file_path, "--steps", "10"])
             assert simulate_result == 0
 
         finally:
@@ -293,7 +297,9 @@ start:
     def test_assemble_then_disassemble(self):
         """Test assembling a file and then disassembling the binary."""
         # Create assembly file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.asm', delete=False) as asm_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".asm", delete=False
+        ) as asm_file:
             asm_file.write("""
     ORG $0200
     LDA #$42
@@ -304,13 +310,13 @@ start:
 
         try:
             # Assemble to binary
-            with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as bin_file:
-                assemble_result = cli_asm6502.main([asm_file_path, '-b', bin_file.name])
+            with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as bin_file:
+                assemble_result = cli_asm6502.main([asm_file_path, "-b", bin_file.name])
                 assert assemble_result == 0
                 assert os.path.exists(bin_file.name)
 
                 # Disassemble the binary
-                disassemble_result = cli_dis6502.main([bin_file.name, '-s', '0x0200'])
+                disassemble_result = cli_dis6502.main([bin_file.name, "-s", "0x0200"])
                 assert disassemble_result == 0
 
         finally:
