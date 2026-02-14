@@ -2286,171 +2286,50 @@ loc_0bea:
 ; Null-terminated strings with high bit set on each character.
 ; Decoded text shown in comments.
 
-; String at $144A: "SOURCE SLOT?"
- db   $D3, $CF, $D5, $D2, $C3, $C5, $A0, $D3, $CC, $CF, $D4, $BF  ; $144A: "SOURCE SLOT?"
- db   $00  ; $1456: "\0"
-; String at $1457: "      DRIVE?"
- db   $A0, $A0, $A0, $A0, $A0, $A0, $C4, $D2, $C9, $D6, $C5, $BF  ; $1457: "      DRIVE?"
- db   $00  ; $1463: "\0"
-; String at $1464: "DESTINATION SLOT?"
- db   $C4, $C5, $D3, $D4, $C9, $CE, $C1, $D4, $C9, $CF, $CE, $A0  ; $1464: "DESTINATION "
- db   $D3, $CC, $CF, $D4, $BF, $00  ; $1470: "SLOT?\0"
-; String at $1476: "           DRIVE?"
- db   $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $C4  ; $1476: "           D"
- db   $D2, $C9, $D6, $C5, $BF, $00  ; $1482: "RIVE?\0"
-; String at $1488: "FILENAME?"
- db   $C6, $C9, $CC, $C5, $CE, $C1, $CD, $C5, $BF, $00  ; $1488: "FILENAME?\0"
-; String at $1492: "INSERT DISKS.  PRESS <ESC> TO RETURN TO  MAIN MENU OR ANY..."
- db   $C9, $CE, $D3, $C5, $D2, $D4, $A0, $C4, $C9, $D3, $CB, $D3  ; $1492: "INSERT DISKS"
- db   $AE, $A0, $A0, $D0, $D2, $C5, $D3, $D3, $A0, $BC, $C5, $D3  ; $149E: ".  PRESS <ES"
- db   $C3, $BE, $A0, $D4, $CF, $A0, $D2, $C5, $D4, $D5, $D2, $CE  ; $14AA: "C> TO RETURN"
- db   $A0, $D4, $CF, $A0, $A0, $CD, $C1, $C9, $CE, $A0, $CD, $C5  ; $14B6: " TO  MAIN ME"
- db   $CE, $D5, $A0, $CF, $D2, $A0, $C1, $CE, $D9, $A0, $CF, $D4  ; $14C2: "NU OR ANY OT"
- db   $C8, $C5, $D2, $A0, $CB, $C5, $D9, $A0, $D4, $CF, $A0, $C2  ; $14CE: "HER KEY TO B"
- db   $C5, $C7, $C9, $CE, $8D, $00  ; $14DA: "EGIN\n\0"
-; String at $14E0: "\nALREADY EXISTS. \n"
- db   $8D, $C1, $CC, $D2, $C5, $C1, $C4, $D9, $A0, $C5, $D8, $C9  ; $14E0: "\nALREADY EXI"
- db   $D3, $D4, $D3, $AE, $A0, $8D, $00  ; $14EC: "STS. \n\0"
-; String at $14F3: "TYPE IN A NEW FILE NAME FOR THE COPY OR\n<RETURN> TO REPL..."
- db   $D4, $D9, $D0, $C5, $A0, $C9, $CE, $A0, $C1, $A0, $CE, $C5  ; $14F3: "TYPE IN A NE"
- db   $D7, $A0, $C6, $C9, $CC, $C5, $A0, $CE, $C1, $CD, $C5, $A0  ; $14FF: "W FILE NAME "
- db   $C6, $CF, $D2, $A0, $D4, $C8, $C5, $A0, $C3, $CF, $D0, $D9  ; $150B: "FOR THE COPY"
- db   $A0, $CF, $D2, $8D, $BC, $D2, $C5, $D4, $D5, $D2, $CE, $BE  ; $1517: " OR\n<RETURN>"
- db   $A0, $D4, $CF, $A0, $D2, $C5, $D0, $CC, $C1, $C3, $C5, $A0  ; $1523: " TO REPLACE "
- db   $C5, $D8, $C9, $D3, $D4, $C9, $CE, $C7, $A0, $C6, $C9, $CC  ; $152F: "EXISTING FIL"
- db   $C5, $A0, $CF, $D2, $8D, $BC, $C3, $D4, $D2, $CC, $AD, $C3  ; $153B: "E OR\n<CTRL-C"
- db   $BE, $BC, $D2, $C5, $D4, $D5, $D2, $CE, $BE, $A0, $D4, $CF  ; $1547: "><RETURN> TO"
- db   $A0, $C3, $C1, $CE, $C3, $C5, $CC, $A0, $C3, $CF, $D0, $D9  ; $1553: " CANCEL COPY"
- db   $8D, $BA, $00  ; $155F: "\n:\0"
+ @apple2_str "SOURCE SLOT?"  ; $144A
+ @apple2_str "      DRIVE?"  ; $1457
+ @apple2_str "DESTINATION SLOT?"  ; $1464
+ @apple2_str "           DRIVE?"  ; $1476
+ @apple2_str "FILENAME?"  ; $1488
+ @apple2_str "INSERT DISKS.  PRESS <ESC> TO RETURN TO  MAIN MENU OR ANY OTHER KEY TO BEGIN\n"  ; $1492
+ @apple2_str "\nALREADY EXISTS. \n"  ; $14E0
+ @apple2_str "TYPE IN A NEW FILE NAME FOR THE COPY OR\n<RETURN> TO REPLACE EXISTING FILE OR\n<CTRL-C><RETURN> TO CANCEL COPY\n:"  ; $14F3
  db   $00  ; $1562: "\0"
-; String at $1563: "ERROR.   CODE="
- db   $C5, $D2, $D2, $CF, $D2, $AE, $A0, $A0, $A0, $C3, $CF, $C4  ; $1563: "ERROR.   COD"
- db   $C5, $BD, $00  ; $156F: "E=\0"
-; String at $1572: "\nWOULD YOU LIKE TO MAKE ANOTHER COPY? "
- db   $8D, $D7, $CF, $D5, $CC, $C4, $A0, $D9, $CF, $D5, $A0, $CC  ; $1572: "\nWOULD YOU L"
- db   $C9, $CB, $C5, $A0, $D4, $CF, $A0, $CD, $C1, $CB, $C5, $A0  ; $157E: "IKE TO MAKE "
- db   $C1, $CE, $CF, $D4, $C8, $C5, $D2, $A0, $C3, $CF, $D0, $D9  ; $158A: "ANOTHER COPY"
- db   $BF, $A0, $00  ; $1596: "? \0"
-; String at $1599: "\nINSERT SOURCE DISK AND PRESS A KEY"
- db   $8D, $C9, $CE, $D3, $C5, $D2, $D4, $A0, $D3, $CF, $D5, $D2  ; $1599: "\nINSERT SOUR"
- db   $C3, $C5, $A0, $C4, $C9, $D3, $CB, $A0, $C1, $CE, $C4, $A0  ; $15A5: "CE DISK AND "
- db   $D0, $D2, $C5, $D3, $D3, $A0, $C1, $A0, $CB, $C5, $D9, $00  ; $15B1: "PRESS A KEY\0"
-; String at $15BD: "\nINSERT DESTINATION DISK AND PRESS A KEY "
- db   $8D, $C9, $CE, $D3, $C5, $D2, $D4, $A0, $C4, $C5, $D3, $D4  ; $15BD: "\nINSERT DEST"
- db   $C9, $CE, $C1, $D4, $C9, $CF, $CE, $A0, $C4, $C9, $D3, $CB  ; $15C9: "INATION DISK"
- db   $A0, $C1, $CE, $C4, $A0, $D0, $D2, $C5, $D3, $D3, $A0, $C1  ; $15D5: " AND PRESS A"
- db   $A0, $CB, $C5, $D9, $A0, $00  ; $15E1: " KEY \0"
-; String at $15E7: "DO YOU WANT PROMPTING? "
- db   $C4, $CF, $A0, $D9, $CF, $D5, $A0, $D7, $C1, $CE, $D4, $A0  ; $15E7: "DO YOU WANT "
- db   $D0, $D2, $CF, $CD, $D0, $D4, $C9, $CE, $C7, $BF, $A0, $00  ; $15F3: "PROMPTING? \0"
-; String at $15FF: "DONE\n"
- db   $C4, $CF, $CE, $C5, $8D, $00  ; $15FF: "DONE\n\0"
-; String at $1605: "NO FILES SELECTED[$87]\n"
- db   $CE, $CF, $A0, $C6, $C9, $CC, $C5, $D3, $A0, $D3, $C5, $CC  ; $1605: "NO FILES SEL"
- db   $C5, $C3, $D4, $C5, $C4, $87, $8D, $00  ; $1611: "ECTED[$87]\n\0"
-; String at $1619: "DISK FULL\n"
- db   $C4, $C9, $D3, $CB, $A0, $C6, $D5, $CC, $CC, $8D, $00  ; $1619: "DISK FULL\n\0"
-; String at $1624: "DISK WRITE PROTECTED\n"
- db   $C4, $C9, $D3, $CB, $A0, $D7, $D2, $C9, $D4, $C5, $A0, $D0  ; $1624: "DISK WRITE P"
- db   $D2, $CF, $D4, $C5, $C3, $D4, $C5, $C4, $8D, $00  ; $1630: "ROTECTED\n\0"
-; String at $163A: "FILE LOCKED\n"
- db   $C6, $C9, $CC, $C5, $A0, $CC, $CF, $C3, $CB, $C5, $C4, $8D  ; $163A: "FILE LOCKED\n"
- db   $00  ; $1646: "\0"
-; String at $1647: "I/O ERROR\n"
- db   $C9, $AF, $CF, $A0, $C5, $D2, $D2, $CF, $D2, $8D, $00  ; $1647: "I/O ERROR\n\0"
-; String at $1652: "INVALID FILENAME"
- db   $C9, $CE, $D6, $C1, $CC, $C9, $C4, $A0, $C6, $C9, $CC, $C5  ; $1652: "INVALID FILE"
- db   $CE, $C1, $CD, $C5, $00  ; $165E: "NAME\0"
-; String at $1663: "[$87][$87]INSUFFICIENT MEMORY TO RUN PROGRAM\n"
- db   $87, $87, $C9, $CE, $D3, $D5, $C6, $C6, $C9, $C3, $C9, $C5  ; $1663: "[$87][$87]INSUFFICIE"
- db   $CE, $D4, $A0, $CD, $C5, $CD, $CF, $D2, $D9, $A0, $D4, $CF  ; $166F: "NT MEMORY TO"
- db   $A0, $D2, $D5, $CE, $A0, $D0, $D2, $CF, $C7, $D2, $C1, $CD  ; $167B: " RUN PROGRAM"
- db   $8D, $00  ; $1687: "\n\0"
-; String at $1689: "*****************************************        APPLE ][..."
- db   $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA  ; $1689: "************"
- db   $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA  ; $1695: "************"
- db   $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA  ; $16A1: "************"
- db   $AA, $AA, $AA, $AA, $AA, $A0, $A0, $A0, $A0, $A0, $A0, $A0  ; $16AD: "*****       "
- db   $A0, $C1, $D0, $D0, $CC, $C5, $A0, $DD, $DB, $A0, $C6, $C9  ; $16B9: " APPLE ][ FI"
- db   $CC, $C5, $A0, $C4, $C5, $D6, $C5, $CC, $CF, $D0, $C5, $D2  ; $16C5: "LE DEVELOPER"
- db   $A0, $A0, $A0, $A0, $A0, $A0, $A0, $AA, $AA, $A0, $A0, $A0  ; $16D1: "       **   "
- db   $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0  ; $16DD: "            "
- db   $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0  ; $16E9: "            "
- db   $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $AA  ; $16F5: "           *"
- db   $AA, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0  ; $1701: "*           "
- db   $A0, $A0, $C6, $C9, $C4, $A0, $D6, $C5, $D2, $D3, $C9, $CF  ; $170D: "  FID VERSIO"
- db   $CE, $A0, $CD, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0  ; $1719: "N M         "
- db   $A0, $A0, $A0, $AA, $00  ; $1725: "   *\0"
-; String at $172A: "*                                      **  COPYRIGHT 1979..."
- db   $AA, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0  ; $172A: "*           "
- db   $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0  ; $1736: "            "
- db   $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0  ; $1742: "            "
- db   $A0, $A0, $A0, $AA, $AA, $A0, $A0, $C3, $CF, $D0, $D9, $D2  ; $174E: "   **  COPYR"
- db   $C9, $C7, $C8, $D4, $A0, $B1, $B9, $B7, $B9, $A0, $C1, $D0  ; $175A: "IGHT 1979 AP"
- db   $D0, $CC, $C5, $A0, $C3, $CF, $CD, $D0, $D5, $D4, $C5, $D2  ; $1766: "PLE COMPUTER"
- db   $A0, $C9, $CE, $C3, $AE, $A0, $A0, $AA, $AA, $AA, $AA, $AA  ; $1772: " INC.  *****"
- db   $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA  ; $177E: "************"
- db   $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA  ; $178A: "************"
- db   $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA  ; $1796: "************"
- db   $8D, $C3, $C8, $CF, $CF, $D3, $C5, $A0, $CF, $CE, $C5, $A0  ; $17A2: "\nCHOOSE ONE "
- db   $CF, $C6, $A0, $D4, $C8, $C5, $A0, $C6, $CF, $CC, $CC, $CF  ; $17AE: "OF THE FOLLO"
- db   $D7, $C9, $CE, $C7, $A0, $CF, $D0, $D4, $C9, $CF, $CE, $D3  ; $17BA: "WING OPTIONS"
- db   $8D, $8D, $00  ; $17C6: "\n\n\0"
-; String at $17C9: "PRESS ANY KEY TO CONTINUE "
- db   $D0, $D2, $C5, $D3, $D3, $A0, $C1, $CE, $D9, $A0, $CB, $C5  ; $17C9: "PRESS ANY KE"
- db   $D9, $A0, $D4, $CF, $A0, $C3, $CF, $CE, $D4, $C9, $CE, $D5  ; $17D5: "Y TO CONTINU"
- db   $C5, $A0, $00  ; $17E1: "E \0"
-; String at $17E4: "CANCELLED\n"
- db   $C3, $C1, $CE, $C3, $C5, $CC, $CC, $C5, $C4, $8D, $00  ; $17E4: "CANCELLED\n\0"
-; String at $17EF: " SECTORS FREE\n"
- db   $A0, $D3, $C5, $C3, $D4, $CF, $D2, $D3, $A0, $C6, $D2, $C5  ; $17EF: " SECTORS FRE"
- db   $C5, $8D, $00  ; $17FB: "E\n\0"
-; String at $17FE: " SECTORS USED\n\n"
- db   $A0, $D3, $C5, $C3, $D4, $CF, $D2, $D3, $A0, $D5, $D3, $C5  ; $17FE: " SECTORS USE"
- db   $C4, $8D, $8D, $00  ; $180A: "D\n\n\0"
-; String at $180E: "DO YOU WISH TO REPLACE IT ANYWAY? "
- db   $C4, $CF, $A0, $D9, $CF, $D5, $A0, $D7, $C9, $D3, $C8, $A0  ; $180E: "DO YOU WISH "
- db   $D4, $CF, $A0, $D2, $C5, $D0, $CC, $C1, $C3, $C5, $A0, $C9  ; $181A: "TO REPLACE I"
- db   $D4, $A0, $C1, $CE, $D9, $D7, $C1, $D9, $BF, $A0, $00  ; $1826: "T ANYWAY? \0"
-; String at $1831: "[$87][$87]UNCOPYABLE FILE\n"
- db   $87, $87, $D5, $CE, $C3, $CF, $D0, $D9, $C1, $C2, $CC, $C5  ; $1831: "[$87][$87]UNCOPYABLE"
- db   $A0, $C6, $C9, $CC, $C5, $8D, $00  ; $183D: " FILE\n\0"
-; String at $1844: "        <"
- db   $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $BC, $00  ; $1844: "        <\0"
-; String at $184E: ">   "
- db   $BE, $A0, $A0, $A0, $00  ; $184E: ">   \0"
-; String at $1853: "WHICH WOULD YOU LIKE? "
- db   $D7, $C8, $C9, $C3, $C8, $A0, $D7, $CF, $D5, $CC, $C4, $A0  ; $1853: "WHICH WOULD "
- db   $D9, $CF, $D5, $A0, $CC, $C9, $CB, $C5, $BF, $A0, $00  ; $185F: "YOU LIKE? \0"
-; String at $186A: "INVALID SLOT"
- db   $C9, $CE, $D6, $C1, $CC, $C9, $C4, $A0, $D3, $CC, $CF, $D4  ; $186A: "INVALID SLOT"
- db   $00  ; $1876: "\0"
-; String at $1877: "INVALID DRIVE"
- db   $C9, $CE, $D6, $C1, $CC, $C9, $C4, $A0, $C4, $D2, $C9, $D6  ; $1877: "INVALID DRIV"
- db   $C5, $00  ; $1883: "E\0"
-; String at $1885: "COPY FILES\n"
- db   $C3, $CF, $D0, $D9, $A0, $C6, $C9, $CC, $C5, $D3, $8D, $00  ; $1885: "COPY FILES\n\0"
-; String at $1891: "DELETE FILES\n"
- db   $C4, $C5, $CC, $C5, $D4, $C5, $A0, $C6, $C9, $CC, $C5, $D3  ; $1891: "DELETE FILES"
- db   $8D, $00  ; $189D: "\n\0"
-; String at $189F: "CATALOG\n"
- db   $C3, $C1, $D4, $C1, $CC, $CF, $C7, $8D, $00  ; $189F: "CATALOG\n\0"
-; String at $18A8: "LOCK FILES\n"
- db   $CC, $CF, $C3, $CB, $A0, $C6, $C9, $CC, $C5, $D3, $8D, $00  ; $18A8: "LOCK FILES\n\0"
-; String at $18B4: "RESET SLOT & DRIVE\n"
- db   $D2, $C5, $D3, $C5, $D4, $A0, $D3, $CC, $CF, $D4, $A0, $A6  ; $18B4: "RESET SLOT &"
- db   $A0, $C4, $D2, $C9, $D6, $C5, $8D, $00  ; $18C0: " DRIVE\n\0"
-; String at $18C8: "SPACE ON DISK\n"
- db   $D3, $D0, $C1, $C3, $C5, $A0, $CF, $CE, $A0, $C4, $C9, $D3  ; $18C8: "SPACE ON DIS"
- db   $CB, $8D, $00  ; $18D4: "K\n\0"
-; String at $18D7: "UNLOCK FILES\n"
- db   $D5, $CE, $CC, $CF, $C3, $CB, $A0, $C6, $C9, $CC, $C5, $D3  ; $18D7: "UNLOCK FILES"
- db   $8D, $00  ; $18E3: "\n\0"
-; String at $18E5: "VERIFY FILES\n"
- db   $D6, $C5, $D2, $C9, $C6, $D9, $A0, $C6, $C9, $CC, $C5, $D3  ; $18E5: "VERIFY FILES"
- db   $8D, $00  ; $18F1: "\n\0"
-; String at $18F3: "QUIT\n"
- db   $D1, $D5, $C9, $D4, $8D, $00  ; $18F3: "QUIT\n\0"
+ @apple2_str "ERROR.   CODE="  ; $1563
+ @apple2_str "\nWOULD YOU LIKE TO MAKE ANOTHER COPY? "  ; $1572
+ @apple2_str "\nINSERT SOURCE DISK AND PRESS A KEY"  ; $1599
+ @apple2_str "\nINSERT DESTINATION DISK AND PRESS A KEY "  ; $15BD
+ @apple2_str "DO YOU WANT PROMPTING? "  ; $15E7
+ @apple2_str "DONE\n"  ; $15FF
+ @apple2_str "NO FILES SELECTED\x87\n"  ; $1605
+ @apple2_str "DISK FULL\n"  ; $1619
+ @apple2_str "DISK WRITE PROTECTED\n"  ; $1624
+ @apple2_str "FILE LOCKED\n"  ; $163A
+ @apple2_str "I/O ERROR\n"  ; $1647
+ @apple2_str "INVALID FILENAME"  ; $1652
+ @apple2_str "\x87\x87INSUFFICIENT MEMORY TO RUN PROGRAM\n"  ; $1663
+ @apple2_str "*****************************************        APPLE ][ FILE DEVELOPER       **                                      **             FID VERSION M            *"  ; $1689
+ @apple2_str "*                                      **  COPYRIGHT 1979 APPLE COMPUTER INC.  *****************************************\nCHOOSE ONE OF THE FOLLOWING OPTIONS\n\n"  ; $172A
+ @apple2_str "PRESS ANY KEY TO CONTINUE "  ; $17C9
+ @apple2_str "CANCELLED\n"  ; $17E4
+ @apple2_str " SECTORS FREE\n"  ; $17EF
+ @apple2_str " SECTORS USED\n\n"  ; $17FE
+ @apple2_str "DO YOU WISH TO REPLACE IT ANYWAY? "  ; $180E
+ @apple2_str "\x87\x87UNCOPYABLE FILE\n"  ; $1831
+ @apple2_str "        <"  ; $1844
+ @apple2_str ">   "  ; $184E
+ @apple2_str "WHICH WOULD YOU LIKE? "  ; $1853
+ @apple2_str "INVALID SLOT"  ; $186A
+ @apple2_str "INVALID DRIVE"  ; $1877
+ @apple2_str "COPY FILES\n"  ; $1885
+ @apple2_str "DELETE FILES\n"  ; $1891
+ @apple2_str "CATALOG\n"  ; $189F
+ @apple2_str "LOCK FILES\n"  ; $18A8
+ @apple2_str "RESET SLOT & DRIVE\n"  ; $18B4
+ @apple2_str "SPACE ON DISK\n"  ; $18C8
+ @apple2_str "UNLOCK FILES\n"  ; $18D7
+ @apple2_str "VERIFY FILES\n"  ; $18E5
+ @apple2_str "QUIT\n"  ; $18F3
 
 ; --- DOS File Manager Parameter List ($18F9-$1A50) ---
 ; This area contains the DOS 3.3 file manager parameter list

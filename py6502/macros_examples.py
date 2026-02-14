@@ -358,7 +358,13 @@ def apple2_str(args, context=None, pass_num=2):
     Space ($20) becomes $A0, 'A' ($41) becomes $C1, etc.
     Carriage returns ($0D) become $8D.
 
+    Supports escape sequences:
+    - \\n -> CR ($0D / $8D when high-bit-set)
+    - \\xHH -> byte value $HH (e.g., \\x87 for control character)
+    - \\\\  -> backslash
+
     Usage: @apple2_str "HELLO"
+    Usage: @apple2_str "ERROR\\x87\\x87CODE"
 
     Args:
         args: list of arguments
@@ -381,18 +387,58 @@ def apple2_str(args, context=None, pass_num=2):
         text = text_arg
 
     # Process escape sequences
-    text = text.replace("\\n", "\r")  # Apple II newline is CR ($0D)
-    text = text.replace("\\r", "\r")
-    text = text.replace("\\t", "\t")
-    text = text.replace("\\\\", "\\")
+    # Handle \xHH hex escapes (e.g., \x87)
+    result_chars = []
+    i = 0
+    while i < len(text):
+        if i + 3 < len(text) and text[i : i + 2] == "\\x":
+            # Hex escape sequence
+            try:
+                hex_str = text[i + 2 : i + 4]
+                byte_val = int(hex_str, 16)
+                result_chars.append(chr(byte_val))
+                i += 4
+                continue
+            except (ValueError, IndexError):
+                # Not a valid hex escape, treat as literal
+                pass
+
+        # Handle standard escapes
+        if i + 1 < len(text):
+            if text[i : i + 2] == "\\n":
+                result_chars.append("\r")  # Apple II newline is CR ($0D)
+                i += 2
+                continue
+            elif text[i : i + 2] == "\\r":
+                result_chars.append("\r")
+                i += 2
+                continue
+            elif text[i : i + 2] == "\\t":
+                result_chars.append("\t")
+                i += 2
+                continue
+            elif text[i : i + 2] == "\\\\":
+                result_chars.append("\\")
+                i += 2
+                continue
+
+        # Regular character
+        result_chars.append(text[i])
+        i += 1
+
+    text = "".join(result_chars)
 
     # Convert to Apple II text: set high bit on each character
     result = []
     for c in text:
         byte_val = ord(c)
-        # Set high bit (0x80)
-        apple2_byte = (byte_val | 0x80) & 0xFF
-        result.append(apple2_byte)
+        # For bytes already >= 0x80 (like control characters), keep them as-is
+        # For normal ASCII, set the high bit
+        if byte_val >= 0x80:
+            apple2_byte = byte_val
+        else:
+            apple2_byte = byte_val | 0x80
+        result.append(apple2_byte & 0xFF)
 
     # Add null terminator
     result.append(0x00)

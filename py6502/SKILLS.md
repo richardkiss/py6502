@@ -178,18 +178,58 @@ python3 py6502/cli_asm6502.py code.asm \
 ```
 
 On success: `✓ ROUND-TRIP VERIFICATION SUCCESSFUL!`
-On failure: shows first difference, byte values, detected error patterns.
+
+On failure, the **`--compare` diff mode** shows:
+- First difference with address and byte values
+- **Context bytes** around the difference (before and after)
+- **Pattern detection**: off-by-one errors, endianness swaps, all-zeros/all-0xFF regions
+- **Diagnosis hints**: branch offset issues, data vs. code confusion, addressing mode errors
+
+For even more detail, use the separate `cli_diff6502.py` tool with `-v` flag for grouped
+differences across the entire binary and region-by-region analysis.
 
 ### cli_diff6502.py — Smart Binary Differ
 
-Compares two binaries with 6502-aware diagnosis.
+Dedicated binary comparison tool with **context-aware diff output**. Much more detailed
+than assembler's `--compare` flag.
 
 ```
-python3 py6502/cli_diff6502.py original.bin assembled.bin -v
+python3 py6502/cli_diff6502.py original.bin assembled.bin       # Basic comparison
+python3 py6502/cli_diff6502.py original.bin assembled.bin -v    # Verbose: all grouped differences
+python3 py6502/cli_diff6502.py original.bin assembled.bin --context 32  # More context bytes
+python3 py6502/cli_diff6502.py original.bin assembled.bin -s 0x0800 -e 0x1000  # Compare range
 ```
 
-Auto-detects: off-by-one errors, endianness swaps, size mismatches, data-vs-code
-confusion, branch offset errors. Groups consecutive differences. Exit code 0 = match.
+**Key features:**
+- **Context display**: Shows bytes before/after difference with hex dump and markers
+- **Pattern detection**: Off-by-one errors, endianness swaps, all-zeros regions, branch offset issues
+- **Grouped differences**: Consecutive bytes within 8 bytes grouped together in verbose mode
+- **Diagnosis hints**: Detects data vs. code confusion, addressing mode errors, ROM vs. RAM issues
+- **Address filtering**: Compare only specific memory ranges with `-s`/`-e`
+- **JSON export**: `--json` for scripted analysis
+
+Example verbose output:
+```
+✗ DIFFERENCES FOUND
+Total differences: 3 bytes
+First difference at offset 0x0145 (byte #325)
+
+FIRST DIFFERENCE:
+  Address:  0x0145
+  Original: $A1
+  Assembled: $A0
+
+CONTEXT (16 bytes before and after):
+>>> 0x0140:
+    Original:  9E A1 BD 40 30 A0 A0 A0 A0 A0 A0 A0 00 00 00 00
+    Assembled: 9E A0 BD 40 30 A0 A0 A0 A0 A0 A0 A0 00 00 00 00
+                     ^^
+
+DIAGNOSIS:
+  • All bytes are -1 from expected (possible unsigned/signed mismatch)
+```
+
+Exit code 0 = identical, 1 = differences found.
 
 ### cli_reverse6502.py — Binary Format Helper
 
@@ -233,6 +273,27 @@ documentation and ROM routine descriptions. Edit the `SUBROUTINE_NAMES`,
 python3 py6502/improve_semantic_names.py literate.asm semantic.asm
 ```
 
+### convert_strings_to_macros.py — String Macro Converter
+
+Converts Apple II high-bit-set strings from hex bytes to `@apple2_str` macros.
+Useful for reducing file size and improving readability of string data sections.
+
+```
+# Convert all strings in a file
+python3 py6502/convert_strings_to_macros.py input.asm -o output.asm
+
+# Preview conversions first
+python3 py6502/convert_strings_to_macros.py input.asm -v
+```
+
+**Capabilities:**
+- Parses `db` statements containing Apple II hex bytes
+- Converts to readable ASCII strings with escape sequences
+- Handles control bytes: `\xHH` (e.g., `\x87` for non-ASCII bytes)
+- Handles newlines: `\n` → CR ($0D)
+- Multi-line strings across multiple `db` statements supported
+- Preserves comments for reference
+
 ---
 
 ## Macro System
@@ -268,10 +329,36 @@ dispatch:
 | `byte_table` | Raw byte values | `@byte_table $12, $34, $56` |
 | `word_table` | 16-bit little-endian words | `@word_table $1234` → `$34,$12` |
 | `jump_table` | RTS dispatch table (addr-1) | `@jump_table label_a, label_b` |
+| `apple2_str` | Apple II high-bit-set string | `@apple2_str "HELLO"` → `$C8,$C5,$CC,$CC,$CF,$00` |
 | `repeat_byte` | Fill N bytes | `@repeat_byte $FF, 16` |
 | `raw_hex` | Hex byte insertion | `@raw_hex 48 65 6C 6C 6F` |
 | `sine_table` | 256-byte sine LUT | `@sine_table` or `@sine_table 128` |
 | `cosine_table` | 256-byte cosine LUT | `@cosine_table` |
+
+### Apple II Strings in Detail
+
+The `apple2_str` macro is designed for Apple II assembly where normal text has the
+high bit (0x80) set. It automatically converts readable ASCII to this format.
+
+**Features:**
+- Normal ASCII → high-bit-set (`'A'` $41 → $C1, space $20 → $A0)
+- Newline escape: `\n` → CR ($0D, displayed as $8D with high bit)
+- Hex escapes: `\xHH` → raw byte value (e.g., `\x87` for control character)
+- Null terminator added automatically
+
+**Examples:**
+```asm
+.macro apple2_str = py6502.macros_examples.apple2_str
+
+; Simple string
+@apple2_str "HELLO"          ; → $C8,$C5,$CC,$CC,$CF,$00
+
+; With newline
+@apple2_str "HELLO\nWORLD"   ; → $C8,$C5,$CC,$CC,$CF,$8D,$D7,$CF,$D2,$CC,$C4,$00
+
+; With control bytes (e.g., bell character)
+@apple2_str "ALERT\x87SOUND" ; → $C1,$CC,$C5,$D2,$D4,$87,$D3,$CF,$D5,$CE,$C4,$00
+```
 
 ### Writing Custom Macros
 
