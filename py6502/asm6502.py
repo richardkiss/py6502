@@ -175,155 +175,6 @@ class asm6502:
             )
             return None
 
-    def parse_line(self, thestring):
-        # Check for macro definition: .macro name = module.function
-        macro_def_match = re.match(
-            r"^\s*\.macro\s+(\w+)\s*=\s*(.+)\.(\w+)\s*$", thestring.strip()
-        )
-        if macro_def_match:
-            name = macro_def_match.group(1)
-            module_path = macro_def_match.group(2)
-            function_name = macro_def_match.group(3)
-            self.macro_expander.register_macro(name, module_path, function_name)
-            self.debug(1, f"Macro registered: {name} = {module_path}.{function_name}")
-            return
-
-        # Check for constant/equate assignment: NAME = value
-        equate_match = re.match(
-            r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$", thestring.strip()
-        )
-        if equate_match:
-            name = equate_match.group(1)
-            val = equate_match.group(2)
-            # Try to parse value as int, hex, octal, or another constant
-            if val.startswith("$"):
-                self.constants[name] = int(val[1:], 16)
-            elif val.startswith("@"):
-                self.constants[name] = int(val[1:], 8)
-            elif val.isdigit():
-                self.constants[name] = int(val)
-            elif val in self.constants:
-                self.constants[name] = self.constants[val]
-            else:
-                try:
-                    self.constants[name] = int(val, 0)
-                except Exception:
-                    self.warning(
-                        linenumber,
-                        thestring,
-                        f"Could not parse constant value for {name}",
-                    )
-            self.debug(1, f"Constant assigned: {name} = {self.constants[name]}")
-            return
-
-        mystring, comment = self.strip_comments(thestring)
-        labelstring, mystring = self.strip_label(mystring, linenumber)
-        opcode_anycase, operand = self.strip_opcode(mystring, linenumber)
-        opcode = self.check_opcode(opcode_anycase, linenumber)
-        premode, value = self.identify_addressmodeformat(operand, linenumber)
-        addressmode = self.identify_addressmode(opcode, premode, value, linenumber)
-        self.debug(3, f"PARSE LINE: opcode={str(opcode)}  addressmode={addressmode}")
-        if (opcode is not None) and (addressmode != "UNDECIDED"):
-            astring = opcode + addressmode
-            self.debug(3, f"PARSE LINE 2 astring={astring}")
-            if astring in self.hexmap:
-                self.debug(
-                    3,
-                    f"PARSE LINE 3 astring={astring}  self.hexmap[astring]=0x{self.hexmap[astring]:x}",
-                )
-                opcode_val = self.hexmap[astring]
-            else:
-                opcode_val = None
-        else:
-            opcode_val = None
-            astring = ""
-
-        if addressmode == "relative" and premode == "offset":
-            lowbyte = self.decode_offset(value)
-            highbyte = None
-        elif self.addrmode_length(addressmode) == 0:
-            lowbyte = None
-            highbyte = None
-        elif (self.addrmode_length(addressmode) == 1) and (
-            self.decode_value(value) != -1
-        ):
-            lowbyte = self.decode_value(value) & 0x00FF
-            highbyte = None
-        elif (self.addrmode_length(addressmode) == 2) and (
-            self.decode_value(value) != -1
-        ):
-            lowbyte = self.decode_value(value) & 0x00FF
-            highbyte = ((self.decode_value(value) & 0xFF00) >> 8) & 0x00FF
-        elif (self.addrmode_length(addressmode) == 1) and (
-            self.decode_value(value) == -1
-        ):
-            lowbyte = -1
-            highbyte = None
-        elif (self.addrmode_length(addressmode) == 2) and (
-            self.decode_value(value) == -1
-        ):
-            lowbyte = -1
-            highbyte = -1
-        else:
-            lowbyte = None
-            highbyte = None
-        offset = -1
-
-        # Handle switches between little endian and big endian
-        if opcode == "le":
-            self.littleendian = True
-        if opcode == "be":
-            self.littleendian = False
-
-        # interpret extra bytes from the db, dw, ddw, dqw, text directives.
-        extrabytes = []
-        if (
-            opcode == "db"
-            or opcode == "dw"
-            or opcode == "ddw"
-            or opcode == "dqw"
-            or opcode == "text"
-        ):
-            num_extrabytes = self.count_extrabytes(opcode, operand)
-        else:
-            num_extrabytes = None
-
-        # We are moving the extrabytes parsing to pass 3, so we can
-        # add label addresses into DWs and have the label defined when we need it.
-        #
-        # if (opcode=="db") and (operand != None) and (len(operand) > 0):
-        #    extrabytes = self.decode_extrabytes(linenumber, thestring, operand)
-        # elif (opcode=="dw") and (operand != None) and (len(operand) > 0):
-        #    extrabytes = self.decode_extrawords(linenumber, thestring, operand)
-        # elif (opcode=="ddw") and (operand != None) and (len(operand) > 0):
-        #    extrabytes = self.decode_extradoublewords(linenumber, thestring, operand)
-        # elif (opcode=="dqw") and (operand != None) and (len(operand) > 0):
-        #    extrabytes = self.decode_extraquadwords(linenumber, thestring, operand)
-
-        linetext = thestring
-        thetuple = (
-            offset,
-            linenumber,
-            labelstring,
-            opcode_val,
-            lowbyte,
-            highbyte,
-            opcode,
-            operand,
-            addressmode,
-            value,
-            comment,
-            extrabytes,
-            num_extr_bytes,
-            linetext,
-        )
-        self.allstuff.append(thetuple)
-        self.firstpasstext(thetuple)
-
-        self.debug(2, f"addressmode = {addressmode}")
-        self.debug(2, str(self.allstuff[linenumber - 1]))
-        self.debug(2, "-----------------------")
-
     # Fix indentation and variable scope in identify_addressmodeformat
     def identify_addressmodeformat(self, remainderstr, linenumber):
         thestring = remainderstr.replace(" ", "")
@@ -1606,6 +1457,104 @@ class asm6502:
         self.line += 1
         thetext = "LINE #" + f"{linenumber}".ljust(5) + (f": {thestring}")
         self.debug(2, thetext)
+
+        # Strip comments first for macro and equate detection
+        line_without_comment, _ = self.strip_comments(thestring)
+        line_stripped = line_without_comment.strip()
+
+        # Check for macro definition: .macro name = module.function
+        macro_def_match = re.match(
+            r"^\.macro\s+(\w+)\s*=\s*(.+)\.(\w+)\s*$", line_stripped
+        )
+        if macro_def_match:
+            name = macro_def_match.group(1)
+            module_path = macro_def_match.group(2)
+            function_name = macro_def_match.group(3)
+            self.macro_expander.register_macro(name, module_path, function_name)
+            self.debug(1, f"Macro registered: {name} = {module_path}.{function_name}")
+            # Add placeholder tuple so line numbering stays consistent
+            placeholder = (
+                -1,
+                linenumber,
+                "",
+                None,
+                None,
+                None,
+                "macro",
+                "",
+                "NONE",
+                "",
+                "",
+                [],
+                None,
+                thestring,
+            )
+            self.allstuff.append(placeholder)
+            return
+
+        # Check for constant/equate assignment: NAME = value
+        equate_match = re.match(
+            r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)(?:\s*$)", line_stripped
+        )
+        if equate_match:
+            name = equate_match.group(1)
+            val = equate_match.group(2).strip()
+            # Try to parse value as int, hex, octal, or another constant
+            if val.startswith("$"):
+                try:
+                    self.constants[name] = int(val[1:], 16)
+                except ValueError:
+                    self.warning(
+                        linenumber,
+                        thestring,
+                        f"Could not parse hex value for {name}: {val}",
+                    )
+                    return
+            elif val.startswith("@"):
+                try:
+                    self.constants[name] = int(val[1:], 8)
+                except ValueError:
+                    self.warning(
+                        linenumber,
+                        thestring,
+                        f"Could not parse octal value for {name}: {val}",
+                    )
+                    return
+            elif val.isdigit():
+                self.constants[name] = int(val)
+            elif val in self.constants:
+                self.constants[name] = self.constants[val]
+            else:
+                try:
+                    self.constants[name] = int(val, 0)
+                except Exception:
+                    self.warning(
+                        linenumber,
+                        thestring,
+                        f"Could not parse constant value for {name}: {val}",
+                    )
+                    return
+            self.debug(1, f"Constant assigned: {name} = {self.constants[name]}")
+            # Add placeholder tuple so line numbering stays consistent
+            placeholder = (
+                -1,
+                linenumber,
+                "",
+                None,
+                None,
+                None,
+                "equate",
+                "",
+                "NONE",
+                "",
+                "",
+                [],
+                None,
+                thestring,
+            )
+            self.allstuff.append(placeholder)
+            return
+
         mystring, comment = self.strip_comments(thestring)
         labelstring, mystring = self.strip_label(mystring, linenumber)
         opcode_anycase, operand = self.strip_opcode(mystring, linenumber)

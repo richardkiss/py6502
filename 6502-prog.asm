@@ -104,6 +104,11 @@
 org $0803
 
 ; ============================================================================
+; MACRO DEFINITIONS
+; ============================================================================
+.macro apple2_str = py6502.macros_examples.apple2_str
+
+; ============================================================================
 ; EQUATES: Program Constants, Zero-Page & Memory Addresses
 ; ============================================================================
 ; These are for reference and documentation only. The code continues to use

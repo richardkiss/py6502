@@ -348,3 +348,52 @@ def raw_hex(args, context=None, pass_num=2):
         result.append(value)
 
     return result
+
+
+def apple2_str(args, context=None, pass_num=2):
+    """
+    Expand a null-terminated Apple II string (high-bit-set ASCII).
+
+    Apple II "normal" text has the high bit (0x80) set on every character.
+    Space ($20) becomes $A0, 'A' ($41) becomes $C1, etc.
+    Carriage returns ($0D) become $8D.
+
+    Usage: @apple2_str "HELLO"
+
+    Args:
+        args: list of arguments
+        context: optional assembly context
+        pass_num: assembly pass (1 or 2)
+
+    Returns: bytes for string with high bit set + null terminator
+    """
+    if not args or len(args) == 0:
+        raise ValueError("apple2_str requires a string argument")
+
+    text_arg = args[0]
+
+    # Remove quotes
+    if (text_arg.startswith('"') and text_arg.endswith('"')) or (
+        text_arg.startswith("'") and text_arg.endswith("'")
+    ):
+        text = text_arg[1:-1]
+    else:
+        text = text_arg
+
+    # Process escape sequences
+    text = text.replace("\\n", "\r")  # Apple II newline is CR ($0D)
+    text = text.replace("\\r", "\r")
+    text = text.replace("\\t", "\t")
+    text = text.replace("\\\\", "\\")
+
+    # Convert to Apple II text: set high bit on each character
+    result = []
+    for c in text:
+        byte_val = ord(c)
+        # Set high bit (0x80)
+        apple2_byte = (byte_val | 0x80) & 0xFF
+        result.append(apple2_byte)
+
+    # Add null terminator
+    result.append(0x00)
+    return result

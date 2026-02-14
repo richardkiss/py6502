@@ -480,6 +480,49 @@ By keeping literal addresses in code and using equates only for documentation:
 
 ---
 
+## Real-World Example: FID (File Developer)
+
+The 6502-prog.bin contains the Apple II FID utility (disk file manager). Reverse-engineering
+it into literate assembly demonstrates all these principles:
+
+### Challenge: Understanding Complex Data Structures
+
+FID uses a sophisticated menu system with validation sub-tables:
+
+```asm
+; Main menu selections
+MENU_CHARS = $13AF      ; "123456789" - all valid options
+
+; Sub-tables (offsets from MENU_CHARS base)
+NO_DISK_OPTIONS = $13B9 ; "79" - RESET SLOT & QUIT (no disk needed)
+FILE_OPS = $13BC        ; "625348" - file operations
+COPY_OPTION = $13C3     ; "1" - copy only (needs two slots)
+ALT_PATH_OPS = $13C5    ; "2739" - catalog, reset, space, quit
+```
+
+The `find_in_table` subroutine searches these using offset-based indexing. Without
+documentation, this looks like magic. With comments explaining the table organization,
+the logic becomes clear.
+
+### Solution: Comprehensive Equates + Inline Comments
+
+1. Define all address ranges with clear purpose
+2. Document table layouts with offset calculations
+3. Explain loop structures (Y counter for menu options 0-8)
+4. Note register preservation and side effects
+
+Result: A reader can understand the menu dispatch mechanism without debugging.
+
+### Key Insight: Literal Addresses Are Your Friend
+
+By keeping literal addresses in code and using equates only for documentation:
+- Round-trip verification never fails on addressing modes
+- The code remains portable to different assemblers
+- Comments explain what equates mean
+- No `.a` suffix workarounds needed
+
+---
+
 ## Apple II Specifics
 
 ### Binary Header Format
