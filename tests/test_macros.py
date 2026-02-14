@@ -251,7 +251,7 @@ class TestMacroExpansionIntegration(unittest.TestCase):
             "",
             "org $0800",
             "msg:",
-            "    @text_string \"Hello\"",
+            '    @text_string "Hello"',
             "table:",
             "    @byte_table $41, $42, $43",
         ]
@@ -268,7 +268,7 @@ class TestMacroExpansionIntegration(unittest.TestCase):
         """Test processing with pass_num=1 (size estimation)."""
         input_lines = [
             ".macro text_string = py6502.macros_examples.text_string",
-            "@text_string \"Test\"",
+            '@text_string "Test"',
         ]
 
         output = self.expander.process_file(input_lines, pass_num=1)
@@ -281,7 +281,7 @@ class TestMacroExpansionIntegration(unittest.TestCase):
         """Test processing with pass_num=2 (actual expansion)."""
         input_lines = [
             ".macro text_string = py6502.macros_examples.text_string",
-            "@text_string \"Hi\"",
+            '@text_string "Hi"',
         ]
 
         output = self.expander.process_file(input_lines, pass_num=2)
@@ -328,9 +328,9 @@ class TestMacroExpansionIntegration(unittest.TestCase):
         input_lines = [
             ".macro text_string = py6502.macros_examples.text_string",
             "msg1:",
-            "    @text_string \"A\"",
+            '    @text_string "A"',
             "msg2:",
-            "    @text_string \"B\"",
+            '    @text_string "B"',
         ]
 
         output = self.expander.process_file(input_lines)

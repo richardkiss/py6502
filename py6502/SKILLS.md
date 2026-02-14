@@ -1,825 +1,672 @@
-# SKILLS: Iterative Disassembly and Improvement of 6502 Binaries
+# SKILLS: Reverse Engineering 6502 Binaries into Literate Assembly
 
-## Philosophy and Goal
+## Goal
 
-The goal is to transform a raw 6502 binary blob into literate, human-readable assembly source code that:
-1. **Assembles byte-for-byte identically** to the original binary
-2. Is **human-readable** with meaningful labels, comments, and documentation
-3. Represents **literate programming** - code that tells a story and can be understood
-
-This is an iterative process: **Assemble → Diff → Improve**
-
-Every change must preserve binary identity. This constraint ensures we understand what the code actually does, not what we think it does.
+Transform a raw 6502 binary into **literate assembly** that:
+1. Assembles **byte-for-byte identically** to the original binary
+2. Has meaningful labels, comments, macros, and documentation
+3. Tells the story of what the program does
 
 ## The Core Loop
 
 ```
-┌─────────────────────────────────────────┐
-│  1. Make improvement to assembly        │
-│  2. Reassemble to binary                │
-│  3. Diff against original               │
-│  4. If identical: commit, goto 1        │
-│  5. If different: debug and fix, goto 2 │
-└─────────────────────────────────────────┘
+  1. Make an improvement to the assembly source
+  2. Assemble to binary
+  3. Diff against original
+  4. If identical → commit, go to 1
+  5. If different → fix, go to 2
 ```
 
-**Never break the round-trip.** If you can't maintain byte-for-byte identity, you don't understand the code well enough yet.
+**Never break the round-trip.** Every label rename, every comment, every data
+annotation must preserve binary identity. This constraint forces real understanding.
 
-## Prerequisites
+## Best Practices: Equates, Addressing Modes & Documentation
 
-### Tools Required
-- `a6502` - Assembler (py6502/cli_asm6502.py)
-- `d6502` - Disassembler (py6502/cli_dis6502.py)
-- `diff6502` - Binary comparison (py6502/cli_diff6502.py)
-- `analyze6502` - Control flow analysis (py6502/analyzer6502.py)
-- Python 3.x
-- Text editor
+### Equates for Documentation (Not Code Replacement)
 
-### Knowledge Required
-- Basic 6502 instruction set
-- Addressing modes (immediate, zero-page, absolute, indexed, indirect, relative)
-- Understanding of the .a suffix for explicit absolute addressing
-- Familiarity with hex and binary
-- Understanding of 6502 vs 65C02 differences
-- Apple II memory map and conventions (if working with Apple II binaries)
+When adding equates to document memory locations, **do not replace addresses in the
+code with equate names**. This causes addressing mode mismatches:
 
-### Understanding the Tools
+```asm
+; WRONG: Using equate name in code
+MY_VAR = $1394
+sta MY_VAR          ; Assembler treats this as zero-page → 85 94 (2 bytes)
+                    ; Original was absolute → 8D 94 13 (3 bytes) → BROKEN!
 
-**Assembler (a6502):**
-```
-python3 py6502/cli_asm6502.py input.asm -b output.bin [--verify original.bin]
-```
-- Reads assembly source
-- Produces binary output
-- Supports labels, directives, comments
-- `--verify` flag automatically checks round-trip
-
-**Disassembler (d6502):**
-```
-python3 py6502/cli_dis6502.py input.bin -s START_ADDR -l LENGTH --reassemble -o output.asm
-```
-- Reads binary
-- Produces assembly (with --reassemble flag for round-trip fidelity)
-- Needs start address and length
-
-**Binary Diff Tool (diff6502):**
-```
-python3 py6502/cli_diff6502.py file1.bin file2.bin -s START_ADDR [-v]
-```
-- Compares two binary files byte-by-byte
-- Shows differences with context and address information
-- Essential for debugging round-trip issues
-- Exit code 0 if identical, 1 if different
-
-**Analyzer (analyze6502):**
-```
-python3 py6502/analyzer6502.py binary.bin -s START_ADDR [-e ENTRY_POINT] [-o output.asm]
-```
-- Control flow analysis from entry points
-- Separates code from data
-- Generates improved disassembly with labels
-- Identifies subroutines and strings
-
-## Phase 1: Initial Disassembly and Round-Trip Verification
-
-### Step 1.1: Gather Binary Information
-
-Before disassembling, you need:
-1. **Binary file** - The raw bytes
-2. **Start address** - Where this code lives in 6502 memory space (often $8000, $C000, $0803, etc.)
-3. **Length** - How many bytes to disassemble
-4. **Entry point** - Where execution begins (if known)
-
-For Apple II binaries:
-- Check for 4-byte header: load_addr_lo, load_addr_hi, length_lo, length_hi
-- Reset vector at $FFFC/$FFFD points to main entry
-- Common load addresses: $0801 (BASIC), $0803 (BASIC continuation), $0800-$0900 (utilities), $1000+, $6000+, $8000, $C000
-
-### Step 1.2: Initial Disassembly
-
-```bash
-# Example: Disassemble a binary that loads at $0803, 4686 bytes
-python3 py6502/cli_dis6502.py game.bin -s 2051 -l 4686 --reassemble -o game_v1.asm
+; RIGHT: Use equates for reference, keep literals in code
+MY_VAR = $1394      ; For documentation
+sta $1394           ; Original addressing mode preserved
 ```
 
-The `--reassemble` flag is **critical**. It ensures:
-- Relative branches use numeric offsets, not labels (initially)
-- Zero-page absolute addressing uses `.a` suffix where needed
-- Byte-for-byte reassembly is possible
-- Invalid opcodes are emitted as `db` directives
+**Solution:** Add equates in a dedicated section for reference only. Code uses literal
+addresses. This approach:
+- Maintains byte-for-byte binary compatibility
+- Provides helpful documentation for readers
+- Avoids the `.a` suffix workaround for every high-address instruction
+- Keeps equates as a "cheat sheet" rather than active code replacement
 
-### Step 1.3: Verify Round-Trip
+### Addressing Mode Gotchas
 
-```bash
-# Reassemble the disassembled code with automatic verification
-python3 py6502/cli_asm6502.py game_v1.asm -b game_test.bin --verify game_original.bin
+The 6502 has two common addressing modes for the same address:
 
-# This will assemble and automatically compare, showing:
-# ✓ ROUND-TRIP VERIFICATION SUCCESSFUL!
-# OR
-# ✗ ROUND-TRIP VERIFICATION FAILED! with details
+| Mode | Syntax | Bytes | Example |
+|------|--------|-------|---------|
+| Zero-page | `sta $00` | 2 | Operates on page 0 only |
+| Absolute | `sta $00.a` or `sta $1394` | 3 | Full 16-bit address |
 
-# You can also manually compare with the diff tool:
-python3 py6502/cli_diff6502.py game_original.bin game_test.bin -s 0x0803
-```
+When reassembling from a disassembly, the original binary determined which mode was used.
+The assembler will optimize `sta $00` to zero-page (2 bytes), but if the original was
+absolute (3 bytes), the round-trip fails. Use `.a` suffix to force absolute mode.
 
-**If they differ, you have a problem:**
-- Disassembler bug
-- Addressing mode issue
-- Data interpreted as code
-- Branch offset calculation error
+The `--reassemble` flag in `cli_dis6502.py` handles this automatically by emitting `.a`
+where needed.
 
-**Debug strategies:**
-1. Use the diff tool to find the first byte that differs:
-   ```bash
-   python3 py6502/cli_diff6502.py original.bin test.bin -s START_ADDR
-   ```
-2. The diff tool will show you:
-   - Exact offset and address of difference
-   - Original vs assembled byte values
-   - Context (surrounding bytes)
-3. Look at the assembly around that address
-4. Common issues:
-   - Zero-page vs absolute addressing (missing or wrong `.a` suffix)
-   - Branch offsets incorrect
-   - Data bytes disassembled as instructions
-   - 65C02 vs NMOS 6502 opcode differences
+### Documentation Structure
 
-### Step 1.4: Common Round-Trip Issues
+Effective literate assembly balances:
 
-**Issue: Zero-page addressing optimization**
-```
-; Original binary has: 8D 00 00 (STA $0000 - absolute)
-; Assembler produces:   85 00    (STA $00   - zero-page)
-```
-**Solution:** Use `.a` suffix to force absolute addressing:
-```
-sta $00.a    ; Forces 3-byte absolute addressing
-lda $10.a,x  ; Indexed modes need .a too
-```
+1. **Equates section** (reference only, organized by category)
+   - Zero-page variables and their ranges
+   - ROM entry points with descriptions
+   - Program-specific constants grouped logically
+   - Format: `NAME = $ADDRESS ; brief description`
 
-**Issue: Relative branches**
-```
-; Disassembler should emit absolute addresses that assemble to correct offsets
-bne $8050    ; Assembler calculates offset automatically
-```
+2. **Memory map** (overview of address layout)
+   - Start/end addresses of major sections
+   - Byte counts and subdivisions
+   - Runtime vs. static allocations
+   - Notes on shared memory spaces
 
-**Issue: Data vs Code**
-If data is disassembled as code, the instructions won't reassemble correctly.
-Solution: Mark data regions with `db` directive, or use analyzer6502.py to separate code from data.
+3. **Subroutine headers** (what, not how)
+   - Purpose statement
+   - Entry conditions (registers, flags, memory state)
+   - Exit conditions (return values, side effects)
+   - Call sites (where it's called from)
 
-**Issue: 65C02 undefined opcodes**
-The 65C02 treats undefined opcodes as NOPs. If code contains these, they won't be in the opcode table:
-```
-$02, $22, $42, $62, $82, $C2, $E2: 2-byte NOPs
-$03, $07, $0B, $0F, $13, $17, $1B, $1F, etc.: 1-byte NOPs
-```
-Solution: Emit as `db` directives, or extend the disassembler to recognize them.
+4. **Inline comments** (explain non-obvious operations)
+   - Immediate values and their meanings
+   - Loop structures and counters
+   - Branch targets and why
+   - ROM routine calls and side effects
+   - Register state changes
 
-## Phase 2: Code and Data Separation
-
-Once round-trip works, identify what's code and what's data.
-
-### Step 2.1: Use Control Flow Analysis
-
-```bash
-python3 py6502/analyzer6502.py binary.bin -s 0x0803 -e 0x0803 -o improved.asm
-```
-
-The analyzer will:
-- Trace execution from entry points
-- Mark reachable instructions as CODE
-- Mark everything else as DATA
-- Find strings and identify subroutines
-- Generate improved disassembly with labels
-
-### Step 2.2: Find Entry Points
-
-**Check reset vector:**
-```python
-# Read bytes $FFFC and $FFFD from binary
-reset_low = data[0xFFFC - base_address]
-reset_high = data[0xFFFD - base_address]
-entry_point = reset_low | (reset_high << 8)
-```
-
-**Manual tracing:** Start at the load address or known entry point, trace through branches and jumps.
-
-### Step 2.3: Mark Data Regions
-
-Once you identify data, replace disassembled instructions with data directives:
-
-**Before:**
-```
-8100: 48 45 4C 4C 4F  ; PHA / EOR $4C / etc (nonsense code)
-```
-
-**After:**
-```
-msg_hello:
-    str "HELLO"
-```
-
-**Or for binary data:**
-```
-sprite_data:
-    db $3C, $42, $81, $81, $81, $42, $3C, $00
-```
-
-**Verify round-trip after each change!**
-
-### Step 2.4: Data Pattern Recognition
-
-Common data patterns:
-- **Strings:** ASCII text (often terminated with $00 or high-bit set)
-- **Lookup tables:** Sequential byte/word values
-- **Pointers:** 16-bit addresses (lo/hi byte pairs)
-- **Sprite/graphics data:** Bitmap patterns
-- **Music/sound data:** Structured sequences
-- **Pointer tables:** Arrays of addresses pointing to strings or routines
-
-## Phase 3: Labeling and Structure
-
-Now make the code navigable with meaningful labels.
-
-### Step 3.1: Auto-Generate Labels
-
-First pass: mechanical labels for all jump/branch targets:
-
-**Before:**
-```
-8000: 20 50 80    jsr $8050
-8003: 4C 00 80    jmp $8000
-...
-8050: A9 01       lda #$01
-8052: 60          rts
-```
-
-**After:**
-```
-    org $8000
-L_8000:
-    jsr L_8050
-    jmp L_8000
-
-L_8050:
-    lda #$01
-    rts
-```
-
-**Label all:**
-- JSR targets (subroutines)
-- JMP targets (gotos)
-- Branch targets (conditionals)
-- Data regions
-- Indirect jump tables
-
-### Step 3.2: Convert Addresses to Labels
-
-Replace hardcoded addresses with label references:
-
-**Before:**
-```
-8000: 20 50 80    jsr $8050
-8010: AD 00 20    lda $2000
-8020: 8D 00 04    sta $0400
-```
-
-**After:**
-```
-    org $8000
-    jsr init_screen
-    lda data_table
-    sta SCREEN_BASE
-
-init_screen:
-    ; ... code ...
-
-    org $2000
-data_table:
-    db $00
-
-SCREEN_BASE = $0400
-```
-
-**Verify round-trip!** Labels must resolve to same addresses.
-
-### Step 3.3: Identify Subroutines
-
-A subroutine is code that:
-- Is reached by JSR
-- Ends with RTS
-- May have multiple exit points (multiple RTS)
-
-Mark subroutines clearly:
-```
-; ============================================
-; Subroutine: init_screen
-; Called from: $8000, $8100
-; Purpose: Clear screen to spaces
-; ============================================
-init_screen:
-    lda #$00
-    rts
-```
-
-## Phase 4: Semantic Understanding and Documentation
-
-Now add human meaning to the code.
-
-### Step 4.1: Rename Labels to Meaningful Names
-
-Replace mechanical labels with descriptive names:
-
-**Naming conventions:**
-- Subroutines: verb_noun (e.g., `print_string`, `init_screen`, `update_sprite`)
-- Labels: noun or adjective_noun (e.g., `loop_start`, `done`, `error`)
-- Constants: UPPER_CASE (e.g., `SCREEN_WIDTH`, `MAX_SPRITES`)
-- Variables: lowercase or mixed (e.g., `player_x`, `score`)
-
-### Step 4.2: Document Zero-Page Usage
-
-Zero-page is prime real estate. Document it clearly:
-
-```
-; ============================================
-; Zero-Page Memory Map
-; ============================================
-ZP_TEMP_A       = $00   ; Temporary storage A
-ZP_TEMP_B       = $01   ; Temporary storage B
-ZP_LOOP_CTR     = $02   ; Loop counter
-ZP_STR_PTR_LO   = $10   ; String pointer (low byte)
-ZP_STR_PTR_HI   = $11   ; String pointer (high byte)
-ZP_SCREEN_X     = $20   ; Current screen X position
-ZP_SCREEN_Y     = $21   ; Current screen Y position
-```
-
-### Step 4.3: Add Inline Comments
-
-Comment non-obvious instructions:
-
-```
-init_screen:
-    lda #$00
-    tax                 ; X = 0 (loop counter)
-.clear_loop:
-    sta SCREEN_BASE,x   ; Clear screen byte
-    sta SCREEN_BASE+256,x
-    sta SCREEN_BASE+512,x
-    sta SCREEN_BASE+768,x
-    inx
-    bne .clear_loop     ; Loop 256 times
-    rts
-```
-
-### Step 4.4: Add Block Comments for Subroutines
-
-Document what each subroutine does:
-
-```
-; ============================================
-; Subroutine: print_string
-; ============================================
-; Purpose: Print null-terminated string to screen
-; 
-; Input:
-;   ZP_STR_PTR_LO/HI - Pointer to string
-;   ZP_SCREEN_X      - Starting X position
-;   ZP_SCREEN_Y      - Starting Y position
+Example:
+```asm
+; ============================================================================
+; SUBROUTINE: print_string ($0ACD)
+; ============================================================================
+; Print a null-terminated string from the string table.
 ;
-; Output:
-;   ZP_SCREEN_X      - Updated to end position
+; Entry:  X = string index (0-48)
+; Exit:   String printed via COUT; registers unchanged
+; Uses:   $04-$05 as pointer to current string
 ;
-; Destroys: A, Y
-; Preserves: X
-; ============================================
+; Algorithm:
+;   1. Save registers (A, X, Y)
+;   2. Index into STRING_TABLE at $13E8 (word pointers)
+;   3. Loop through string, outputting characters
+;   4. Stop at null terminator
+;   5. Restore registers
+; ============================================================================
+
 print_string:
+ pha                     ; Save A register
+ tya                     ; Transfer Y to A
+ pha                     ; Save Y register
+ txa                     ; Transfer X to A
+ pha                     ; Save X register (string index)
+ 
+ asl  A                  ; Multiply by 2 (word table offset)
+ tax                     ; Transfer to X
+ lda  $13e8,x            ; Load pointer low byte from table
+ sta  $04                ; Store in $04
+ lda  $13e9,x            ; Load pointer high byte from table
+ sta  $05                ; Store in $05
+ 
+ ldy  #$00               ; Y = 0 (offset in string)
+loop:
+ lda  ($04),y            ; Load character from pointer
+ beq  done               ; If null, exit loop
+ jsr  $fded              ; COUT: output character
+ iny                     ; Next character
+ bne  loop               ; Loop if Y != 0 (max 256 chars)
+ 
+done:
+ pla                     ; Restore X
+ tax
+ pla                     ; Restore Y
+ tay
+ pla                     ; Restore A
+ rts
+```
+
+---
+
+## Tools Reference
+
+All tools live in `py6502/`. Run with `python3 py6502/<tool>`.
+
+### cli_dis6502.py — Disassembler
+
+Converts binary to assembly. **Always use `--reassemble`** for round-trip work.
+
+```
+# Disassemble with reassembly support (critical flags shown)
+python3 py6502/cli_dis6502.py INPUT.bin \
+    -s 0x0803           # start address in 6502 memory
+    --offset 4          # skip N bytes of file header before reading code
+    -l 4686             # number of bytes to disassemble
+    --reassemble        # emit org directive, numeric branch offsets, .a suffixes
+    -o output.asm       # output file
+```
+
+`--reassemble` changes the output from a human listing to something the assembler
+can consume: `org` directive, no address/hex columns, branch offsets as `+$nn`/`-$nn`.
+
+Other useful flags: `--symbols FILE` (load label=address pairs), `-f hex|both`.
+
+### cli_asm6502.py — Assembler
+
+Assembles `.asm` to binary. **Use `--compare`** to verify round-trip in one step.
+
+```
+python3 py6502/cli_asm6502.py code.asm \
+    -b output.bin                   # binary output
+    --compare original_noheader.bin # auto-verify with smart diff
+    -v                              # verbose listing
+    --symbols syms.txt              # dump symbol table
+```
+
+On success: `✓ ROUND-TRIP VERIFICATION SUCCESSFUL!`
+On failure: shows first difference, byte values, detected error patterns.
+
+### cli_diff6502.py — Smart Binary Differ
+
+Compares two binaries with 6502-aware diagnosis.
+
+```
+python3 py6502/cli_diff6502.py original.bin assembled.bin -v
+```
+
+Auto-detects: off-by-one errors, endianness swaps, size mismatches, data-vs-code
+confusion, branch offset errors. Groups consecutive differences. Exit code 0 = match.
+
+### cli_reverse6502.py — Binary Format Helper
+
+Analyzes and manipulates binary headers (Apple II format).
+
+```
+python3 py6502/cli_reverse6502.py FILE.bin --info      # show header
+python3 py6502/cli_reverse6502.py FILE.bin --extract    # strip header → code only
+python3 py6502/cli_reverse6502.py code.bin --make-bin out.bin --addr 0x0803 --len 4686
+```
+
+### cli_analyzer6502.py — Control Flow Analyzer
+
+Traces execution from entry points to separate code from data.
+
+```
+python3 py6502/cli_analyzer6502.py FILE.bin \
+    -s 0x0803 -e 0x0803    # start addr, entry point
+    --regions               # show CODE/DATA regions
+    --subroutines           # list detected subroutines with callers
+    --calls                 # show call graph
+    -o improved.asm         # generate improved disassembly
+```
+
+### generate_literate_asm.py — Label Generator
+
+Takes raw `--reassemble` output and adds mechanical labels (`sub_XXXX`, `loc_XXXX`)
+for all JSR/JMP/branch targets, plus subroutine header comments.
+
+```
+python3 py6502/generate_literate_asm.py raw_v1.asm literate.asm
+```
+
+### improve_semantic_names.py — Semantic Renamer
+
+Applies a mapping of mechanical labels → meaningful names, adds variable
+documentation and ROM routine descriptions. Edit the `SUBROUTINE_NAMES`,
+`LOCATION_NAMES`, and `ROM_DESCRIPTIONS` dicts in the script for each binary.
+
+```
+python3 py6502/improve_semantic_names.py literate.asm semantic.asm
+```
+
+---
+
+## Macro System
+
+Macros generate data at assemble-time via Python functions. They integrate directly
+into the assembler — no preprocessing step needed.
+
+### Defining and Using Macros
+
+```asm
+; Register at top of file
+.macro text_string = py6502.macros_examples.text_string
+.macro word_table  = py6502.macros_examples.word_table
+.macro jump_table  = py6502.macros_examples.jump_table
+
+; Invoke with @
+msg_hello:
+    @text_string "Hello, World!"
+
+addresses:
+    @word_table $1234, $5678
+
+dispatch:
+    @jump_table handler_a, handler_b   ; auto subtracts 1 for RTS trick
+```
+
+### Built-in Macros (py6502.macros_examples)
+
+| Macro | Description | Example |
+|-------|-------------|---------|
+| `text_string` | Null-terminated ASCII | `@text_string "Hello"` → `$48,$65,$6C,$6C,$6F,$00` |
+| `pascal_string` | Length-prefixed string | `@pascal_string "Hi"` → `$02,$48,$69` |
+| `byte_table` | Raw byte values | `@byte_table $12, $34, $56` |
+| `word_table` | 16-bit little-endian words | `@word_table $1234` → `$34,$12` |
+| `jump_table` | RTS dispatch table (addr-1) | `@jump_table label_a, label_b` |
+| `repeat_byte` | Fill N bytes | `@repeat_byte $FF, 16` |
+| `raw_hex` | Hex byte insertion | `@raw_hex 48 65 6C 6C 6F` |
+| `sine_table` | 256-byte sine LUT | `@sine_table` or `@sine_table 128` |
+| `cosine_table` | 256-byte cosine LUT | `@cosine_table` |
+
+### Writing Custom Macros
+
+Create a Python function that receives `args` (list of strings) and returns
+a list of byte values (0–255), a string of assembly lines, or `None`.
+
+```python
+# my_macros.py
+def apple2_str(args, context=None, pass_num=2):
+    """Null-terminated Apple II string (high-bit-set ASCII)."""
+    text = args[0].strip('"').strip("'")
+    text = text.replace('\\n', '\r')  # Apple II uses $8D for newline
+    result = [(ord(c) | 0x80) & 0xFF for c in text]
+    result.append(0x00)  # null terminator
+    return result
+```
+
+Register: `.macro apple2_str = my_macros.apple2_str`
+Use: `@apple2_str "HELLO WORLD"`
+
+**Important:** Macros must return the same number of bytes on pass 1 and pass 2.
+The assembler calls macros twice for label resolution.
+
+---
+
+## Workflow: From Binary to Literate Assembly
+
+### Phase 1: Initial Disassembly and Round-Trip
+
+```bash
+# 1. Analyze binary format
+python3 py6502/cli_reverse6502.py prog.bin --info
+#    → Load address: $0803, Code length: 4686 bytes, 4-byte Apple II header
+
+# 2. Extract code without header (for comparison target)
+dd if=prog.bin of=prog_noheader.bin bs=1 skip=4 count=4686
+
+# 3. Disassemble
+python3 py6502/cli_dis6502.py prog.bin -s 0x0803 --offset 4 -l 4686 \
+    --reassemble -o prog_v1.asm
+
+# 4. Verify round-trip
+python3 py6502/cli_asm6502.py prog_v1.asm -b /tmp/test.bin \
+    --compare prog_noheader.bin
+```
+
+### Phase 2: Code/Data Separation
+
+Use the analyzer to find what's code and what's data:
+
+```bash
+python3 py6502/cli_analyzer6502.py prog_noheader.bin -s 0x0803 -e 0x0803 --regions
+```
+
+Then in the assembly, replace data regions with `db` directives. For strings,
+use `@apple2_str` or `@text_string` macros. For tables, use `@word_table` or
+`@byte_table`. **Verify round-trip after each change.**
+
+Common data patterns to look for:
+- **Strings:** Runs of bytes in $A0–$FE range (Apple II) or $20–$7E (standard ASCII)
+- **Pointer tables:** Pairs of low/high bytes pointing to other addresses in the binary
+- **Jump tables:** Pointer tables where each address is target−1 (RTS dispatch trick)
+- **Lookup tables:** Sequential or patterned byte/word values
+
+### Phase 3: Labels and Structure
+
+```bash
+# Auto-generate mechanical labels for all targets
+python3 py6502/generate_literate_asm.py prog_v1.asm prog_v2.asm
+```
+
+This creates `sub_XXXX:` for JSR targets and `loc_XXXX:` for JMP/branch targets.
+Verify round-trip. Then replace numeric branch offsets with label references where
+the assembler can calculate them.
+
+### Phase 4: Semantic Understanding
+
+Rename labels based on what the code actually does:
+
+```asm
+; Before                    ; After
+sub_0844:                   init_system:
+sub_088b:                   show_menu:
+sub_0acd:                   print_string_x:
+loc_080e:                   main_loop:
+```
+
+Add documentation:
+- **Block comments** above each subroutine: purpose, inputs, outputs, clobbers
+- **Inline comments** for non-obvious instructions
+- **Memory map** at the top of the file: zero-page usage, RAM variables, I/O
+- **Constants** via equates: `SCREEN_WIDTH = 40`
+
+Use `improve_semantic_names.py` to apply batch renames, or edit by hand.
+**Verify round-trip after each batch of changes.**
+
+### Phase 5: Macros for Data
+
+Replace raw `db` sequences with macros that convey meaning:
+
+```asm
+; Before
+msg_source_slot:
+    db $D3, $CF, $D5, $D2, $C3, $C5, $A0, $D3, $CC, $CF, $D4, $BF, $00
+
+; After
+.macro apple2_str = my_macros.apple2_str
+msg_source_slot:
+    @apple2_str "SOURCE SLOT?"
+```
+
+For pointer tables and jump tables:
+```asm
+; Before
+    db $65, $0E, $A9, $0D, $D7, $0D, $96, $0D, ...
+
+; After
+menu_dispatch:
+    @jump_table do_copy, do_delete, do_catalog, do_lock, ...
+```
+
+**Verify round-trip after each change.**
+
+---
+
+## Assembler Features Reference
+
+### Directives
+
+| Directive | Purpose | Example |
+|-----------|---------|---------|
+| `org $XXXX` | Set assembly address | `org $0803` |
+| `db` | Define bytes | `db $41, $42, $00` |
+| `dw` | Define words (16-bit LE) | `dw $1234, label` |
+| `ddw` | Define double words | `ddw $12345678` |
+| `text` | Null-terminated string | `text "hello"` |
+| `label = value` | Constant/equate | `SCREEN = $0400` |
+
+### Addressing Mode Suffix
+
+The `.a` suffix forces **absolute** (3-byte) addressing when the assembler would
+otherwise optimize to zero-page (2-byte):
+
+```asm
+sta $00      ; → 85 00       (2 bytes, zero-page)
+sta $00.a    ; → 8D 00 00    (3 bytes, absolute)
+lda $10.a,x  ; → BD 10 00    (3 bytes, absolute,X)
+```
+
+This is critical for round-trip fidelity. The disassembler's `--reassemble` mode
+emits `.a` where the original binary uses absolute addressing for zero-page addresses.
+
+### Branch Offsets
+
+In `--reassemble` mode, branches are emitted as signed offsets:
+
+```asm
+bne +$09     ; branch forward 9 bytes
+bpl -$0d     ; branch backward 13 bytes
+```
+
+These can later be replaced with label references once labels are established.
+
+---
+
+## Real-World Example: FID (File Developer)
+
+The 6502-prog.bin contains the Apple II FID utility (disk file manager). Reverse-engineering
+it into literate assembly demonstrates all these principles:
+
+### Challenge: Understanding Complex Data Structures
+
+FID uses a sophisticated menu system with validation sub-tables:
+
+```asm
+; Main menu selections
+MENU_CHARS = $13AF      ; "123456789" - all valid options
+
+; Sub-tables (offsets from MENU_CHARS base)
+NO_DISK_OPTIONS = $13B9 ; "79" - RESET SLOT & QUIT (no disk needed)
+FILE_OPS = $13BC        ; "625348" - file operations
+COPY_OPTION = $13C3     ; "1" - copy only (needs two slots)
+ALT_PATH_OPS = $13C5    ; "2739" - catalog, reset, space, quit
+```
+
+The `find_in_table` subroutine searches these using offset-based indexing. Without
+documentation, this looks like magic. With comments explaining the table organization,
+the logic becomes clear.
+
+### Solution: Comprehensive Equates + Inline Comments
+
+1. Define all address ranges with clear purpose
+2. Document table layouts with offset calculations
+3. Explain loop structures (Y counter for menu options 0-8)
+4. Note register preservation and side effects
+
+Result: A reader can understand the menu dispatch mechanism without debugging.
+
+### Key Insight: Literal Addresses Are Your Friend
+
+By keeping literal addresses in code and using equates only for documentation:
+- Round-trip verification never fails on addressing modes
+- The code remains portable to different assemblers
+- Comments explain what equates mean
+- No `.a` suffix workarounds needed
+
+---
+
+## Apple II Specifics
+
+### Binary Header Format
+
+Many Apple II binaries have a 4-byte header:
+
+| Offset | Content | Example |
+|--------|---------|---------|
+| $00–$01 | Load address (little-endian) | $03 $08 → $0803 |
+| $02–$03 | Code length (little-endian) | $4E $12 → 4686 |
+
+**Always skip the header** when disassembling (`--offset 4`) and compare against
+the headerless code (`dd if=file.bin of=code.bin bs=1 skip=4`).
+
+### Apple II ROM Calls
+
+Common Monitor ROM entry points:
+
+| Address | Name | Description |
+|---------|------|-------------|
+| `$FBC1` | BASCALC | Calculate text base address from CV ($25) |
+| `$FC10` | CROUT1 | CR if cursor not at column 0 |
+| `$FC58` | HOME | Clear screen, cursor to top-left |
+| `$FC62` | CLREOL | Clear to end of line |
+| `$FC66` | CLREOP | Clear to end of page |
+| `$FD0C` | RDKEY | Read one keypress (blocks) |
+| `$FD6F` | GETLN | Read line into $0200 buffer, X=length |
+| `$FD8E` | CROUT | Output carriage return |
+| `$FDDA` | PRBYTE | Print A register as 2-digit hex |
+| `$FDED` | COUT | Output character in A |
+| `$FF3A` | BELL | Ring bell (beep) |
+
+### DOS 3.3 Entry Points
+
+| Address | Description |
+|---------|-------------|
+| `$03D2` | DOS version check byte |
+| `$03D3` | DOS warm start (return to BASIC/DOS) |
+| `$03D6` | File manager call |
+| `$03D9` | File manager call (alt entry) |
+| `$03DC` | Get file manager parameter list (returns A,Y) |
+| `$03E3` | Get RWTS parameter list (returns A,Y) |
+
+### Apple II Text Encoding
+
+Apple II "normal" text has the high bit set on every character:
+
+| Char | ASCII | Apple II |
+|------|-------|----------|
+| Space | $20 | $A0 |
+| A | $41 | $C1 |
+| 0 | $30 | $B0 |
+| CR | $0D | $8D |
+
+Strings are typically null-terminated ($00). A custom `apple2_str` macro handles
+the encoding automatically.
+
+### Key Zero-Page Locations
+
+| Address | Name | Used By |
+|---------|------|---------|
+| `$00–$01` | General pointer | Monitor, DOS |
+| `$02–$03` | General pointer | Monitor, DOS |
+| `$22` | WNDLFT | Text window left |
+| `$24` | CH | Cursor horizontal position |
+| `$25` | CV | Cursor vertical position |
+| `$33` | PROMPT | Prompt character |
+| `$76` | HGRPAGE | Hi-res page |
+| `$D9` | ORONE | OR mask for output |
+
+---
+
+## Common 6502 Patterns
+
+### RTS Dispatch (Computed Jump via Stack)
+
+```asm
+; A = command index
+dispatch:
+    asl A             ; ×2 for word index
+    tay
+    lda table+1,y     ; push high byte
+    pha
+    lda table,y       ; push low byte
+    pha
+    rts               ; "jump" to address+1
+
+table:
+    ; addresses are target−1 because RTS adds 1
+    @jump_table handler_0, handler_1, handler_2
+```
+
+### 16-Bit Addition
+
+```asm
+    clc
+    lda ptr_lo
+    adc #$40
+    sta ptr_lo
+    lda ptr_hi
+    adc #$00          ; carry propagation
+    sta ptr_hi
+```
+
+### String Printing Loop
+
+```asm
+print_str:
     ldy #$00
 .loop:
-    lda (ZP_STR_PTR_LO),y
-    beq .done           ; Exit on null terminator
-    jsr print_char
+    lda (ptr),y
+    beq .done         ; null terminator
+    jsr COUT
     iny
     bne .loop
 .done:
     rts
 ```
 
-### Step 4.5: Identify Common 6502 Patterns
+### Indexed String Table Printing
 
-**Pattern: 16-bit addition**
+```asm
+; X = string index (0, 1, 2, ...)
+; Table at str_ptrs contains word pointers to null-terminated strings
+print_indexed:
+    txa
+    asl A              ; ×2 for word table
+    tax
+    lda str_ptrs,x     ; low byte of pointer
+    sta $04
+    lda str_ptrs+1,x   ; high byte of pointer
+    sta $05
+    ldy #$00
+.loop:
+    lda ($04),y
+    beq .done
+    jsr COUT
+    iny
+    bne .loop
+.done:
+    rts
 ```
-; Add 16-bit value to pointer
-add_to_pointer:
+
+### BCD Arithmetic (Score Keeping)
+
+```asm
+    sed               ; set decimal mode
     clc
-    lda ZP_PTR_LO
-    adc #$40            ; Add offset low byte
-    sta ZP_PTR_LO
-    lda ZP_PTR_HI
-    adc #$00            ; Add carry to high byte
-    sta ZP_PTR_HI
+    lda score_lo
+    adc #$01
+    sta score_lo
+    lda score_hi
+    adc #$00
+    sta score_hi
+    cld               ; clear decimal mode (important!)
 ```
 
-**Pattern: Indirect indexed addressing for tables**
-```
-; Y = sprite number
-; Load sprite X position
-    lda sprite_x_table,y
-    sta ZP_SPRITE_X
-```
-
-**Pattern: Bit masking**
-```
-; Test bit 7 of status byte
-    lda status_byte
-    bmi negative_flag_set  ; Branch if bit 7 = 1
-    ; ... bit 7 is 0
-```
-
-**Pattern: Table-driven dispatch**
-```
-; A = command number
-dispatch:
-    asl                    ; Multiply by 2 (word addresses)
-    tax
-    lda command_table+1,x
-    pha
-    lda command_table,x
-    pha
-    rts                    ; "Jump" via RTS
-```
-
-## Phase 5: Advanced Abstractions with Python Macros
-
-For complex data or repetitive patterns, use Python to generate assembly.
-
-### Step 5.1: Understanding Python Macro Concept
-
-The idea: embed Python code that generates assembly at assemble-time.
-
-**Conceptual syntax:**
-```
-.python
-# Python code here
-# Output assembly via print()
-.endpython
-```
-
-This requires assembler enhancement to:
-1. Detect `.python` / `.endpython` blocks
-2. Execute Python code in safe context
-3. Capture stdout as assembly lines
-4. Continue assembling
-
-### Step 5.2: Example - Generate Sine Table
-
-**With Python macro:**
-```
-sine_table:
-.python
-import math
-for i in range(256):
-    value = int(128 + 127 * math.sin(i * 2 * math.pi / 256))
-    print(f"    db ${value:02X}")
-.endpython
-```
-
-### Step 5.3: Example - Lookup Table Generation
-
-```
-; Multiplication table for * 40 (screen row calculation)
-mult_40_table:
-.python
-for i in range(256):
-    value = i * 40
-    lo = value & 0xFF
-    hi = (value >> 8) & 0xFF
-    print(f"    db ${lo:02X}, ${hi:02X}  ; {i} * 40")
-.endpython
-```
-
-### Step 5.4: Pseudo-Opcodes (Custom Directives)
-
-Define new assembler directives for common patterns:
-
-**Example: .byte16 for 16-bit values**
-```
-; Instead of:
-    lda #<value
-    sta ZP_PTR_LO
-    lda #>value
-    sta ZP_PTR_HI
-
-; Use:
-.byte16 ZP_PTR_LO, value
-```
-
-## Phase 6: Organizing Large Disassemblies
-
-### Step 6.1: Split Into Multiple Files
-
-Organize by functional area:
-
-```
-main.asm        - Entry point and main loop
-graphics.asm    - Screen drawing routines
-input.asm       - Keyboard/joystick handling
-sound.asm       - Sound effects and music
-data.asm        - Lookup tables and constants
-```
-
-Use `.include` directive (requires assembler enhancement):
-```
-; main.asm
-    org $8000
-
-.include "graphics.asm"
-.include "input.asm"
-.include "sound.asm"
-.include "data.asm"
-
-start:
-    jsr init_graphics
-    jsr init_sound
-main_loop:
-    jsr handle_input
-    jsr update_screen
-    jmp main_loop
-```
-
-### Step 6.2: Memory Map Documentation
-
-Create comprehensive memory map:
-
-```
-; ============================================
-; Memory Map
-; ============================================
-; $0000-$00FF : Zero-page RAM
-; $0100-$01FF : Stack
-; $0200-$07FF : General RAM
-; $0800-$0FFF : Screen memory
-; $1000-$1FFF : Character set
-; $8000-$FFFF : ROM (this program)
-;
-; ROM Layout:
-; $8000-$8FFF : Main program code
-; $9000-$9FFF : Graphics routines
-; $A000-$AFFF : Sound routines  
-; $B000-$DFFF : Data tables
-; $E000-$FFFF : System routines
-; ============================================
-```
-
-## Phase 7: Verification and Testing
-
-### Step 1: Automated Round-Trip Testing
-
-The assembler has a built-in `--verify` flag for automated round-trip testing:
-
-```bash
-# One-step verification during assembly
-python3 py6502/cli_asm6502.py game.asm -b game_new.bin --verify game_original.bin
-
-# This will automatically:
-# 1. Assemble the code
-# 2. Compare with original
-# 3. Report success or show first difference
-```
-
-Or create a test script:
-
-```bash
-#!/bin/bash
-echo "Testing round-trip assembly..."
-
-# Assemble with verification
-python3 py6502/cli_asm6502.py game.asm -b game_new.bin --verify game_original.bin
-
-# Exit code: 0 = success, 1 = failed
-if [ $? -eq 0 ]; then
-    echo "✓ All tests passed!"
-else
-    echo "✗ Test failed - see output above"
-    echo "Run: python3 py6502/cli_diff6502.py game_original.bin game_new.bin -s ADDR -v"
-fi
-```
-
-## Common Pitfalls and Solutions
-
-### Pitfall 1: Zero-Page Addressing Ambiguity
-
-**Problem:** Assembler optimizes absolute → zero-page, breaking round-trip.
-
-**Solution:** Use `.a` suffix to force absolute addressing:
-```
-sta $0000.a     ; 3 bytes: 8D 00 00
-lda $0010.a,x   ; 3 bytes: BD 10 00
-```
-
-### Pitfall 2: Branch Offset Calculation
-
-**Problem:** Branches use relative offsets, not absolute addresses.
-
-**Solution:** In reassemble mode, disassembler should emit addresses that calculate correctly.
-```
-; At $8000:
-bne $8010   ; Assembler calculates: $8010 - ($8002) = $0E offset
-```
-
-### Pitfall 3: Self-Modifying Code
-
-**Problem:** Code that modifies itself won't disassemble correctly.
-
-**Example:**
-```
-8000: A9 00       lda #$00
-8002: 8D 01 80    sta $8001    ; Modifies own immediate value!
-```
-
-**Solution:** 
-1. Document as self-modifying
-2. Show both initial and modified states
-3. Consider using variables instead in documentation
-
-### Pitfall 4: Data Within Code
-
-**Problem:** Inline data (jump tables, constants) disassembles as garbage instructions.
-
-**Example:**
-```
-8000: 4C 10 80    jmp $8010
-8003: 48 45 4C    ; "HEL" - string data
-8006: 4C 4F 00    ; "LO" - string data
-8009: 00 00       ; padding
-...
-8010:             ; actual code continues
-```
-
-**Solution:** Mark data sections explicitly:
-```
-    jmp start
-msg_hello:
-    str "HELLO"
-    db $00, $00   ; padding
-start:
-    ; code...
-```
-
-### Pitfall 5: Computed Jumps
-
-**Problem:** Indirect jumps through tables.
-
-**Example:**
-```
-; Jump table dispatch
-    lda command
-    asl
-    tax
-    lda jump_table+1,x
-    pha
-    lda jump_table,x
-    pha
-    rts            ; "Returns" to address from table
-
-jump_table:
-    dw &cmd_0-1    ; Addresses minus 1 (RTS adds 1)
-    dw &cmd_1-1
-    dw &cmd_2-1
-```
-
-**Solution:** Document the pattern and maintain the table carefully.
-
-## Tool Enhancement Checklist
-
-### Assembler Enhancements Needed
-
-- [ ] `.include` directive for file inclusion
-- [ ] `.python` / `.endpython` for Python macro blocks
-- [ ] `.macro` / `.endmacro` for text macros
-- [ ] Conditional assembly (`.if` / `.else` / `.endif`)
-- [ ] Better error messages with line numbers
-- [ ] Symbol table export to JSON/text
-- [ ] Multiple input file support
-- [ ] Listing file generation
-
-### Disassembler Enhancements Needed
-
-- [ ] 65C02 undefined opcode recognition
-- [ ] Symbol table import
-- [ ] Comments from symbol annotations
-- [ ] Multiple output formats
-
-### Completed Tools
-
-**diff6502.py** - Smart diffing: ✅
-- Binary diff with assembly context
-- Show hex and assembly side-by-side
-- Highlight differences
-- Track down addressing mode issues
-- Usage: `python3 py6502/cli_diff6502.py file1.bin file2.bin -s ADDR`
-
-**analyzer6502.py** - Static analysis: ✅
-- Control flow graphing
-- Subroutine detection
-- Entry point finding
-- Code/data separation
-- String detection
-- Cross-reference generation
-- Output: improved assembly and JSON analysis
-
-## Workflow Example: Complete Disassembly
-
-Let's walk through a complete example with Apple's FID (File Developer) utility.
-
-### Given: 6502-prog.bin (4686 bytes, loads at $0803)
-
-**Step 1: Initial disassembly**
-```bash
-python3 py6502/cli_dis6502.py 6502-prog.bin -s 0x0803 -l 4686 --reassemble -o fid_v1.asm
-```
-
-**Step 2: Verify round-trip**
-```bash
-python3 py6502/cli_asm6502.py fid_v1.asm -b fid_test.bin --verify 6502-prog.bin
-# ✓ ROUND-TRIP VERIFICATION SUCCESSFUL!
-```
-
-**Step 3: Analyze code structure**
-```bash
-python3 py6502/analyzer6502.py 6502-prog.bin -s 0x0803 -e 0x0803 -o fid_improved.asm
-```
-
-**Step 4: Identify code vs data regions**
-The analyzer will separate machine code from data tables and strings.
-
-**Step 5: Add labels**
-Convert JSR/JMP targets to label references.
-
-**Step 6: Document subroutines**
-Add comments explaining what each routine does.
-
-**Step 7: Verify round-trip at each step!**
-```bash
-# Quick verification with --verify flag
-python3 py6502/cli_asm6502.py fid_v5.asm -b fid_test.bin --verify 6502-prog.bin
-# ✓ ROUND-TRIP VERIFICATION SUCCESSFUL!
-
-# Or detailed comparison
-python3 py6502/cli_diff6502.py 6502-prog.bin fid_test.bin -s 0x0803
-# ✓ FILES ARE IDENTICAL!
-```
-
-**Step 8: Organize into sections**
-```
-; ============================================
-; MAIN PROGRAM
-; ============================================
-    org $0803
-main:
-    ...
-
-; ============================================
-; GRAPHICS ROUTINES
-; ============================================
-init_screen:
-    ...
-
-; ============================================
-; DATA SECTION
-; ============================================
-    org $1400
-string_table:
-    ...
-```
-
-## Tips for Success
-
-1. **Always verify round-trip** after every change
-2. **Make small, incremental improvements** - don't try to do everything at once
-3. **Document as you learn** - write down discoveries immediately
-4. **Use version control** - commit after each successful round-trip
-5. **Keep original binary safe** - never lose your reference
-6. **Test with simulator** when possible - verify behavior matches
-7. **Research the platform** - understand the hardware and conventions
-8. **Look for patterns** - 6502 code often repeats similar patterns
-9. **Be patient** - disassembly is detective work, not a race
-10. **Ask for help** - share findings, get feedback from others
-
-## Conclusion
-
-Disassembling a 6502 binary is an iterative process that combines:
-- **Technical precision** (byte-perfect round-trips)
-- **Detective work** (understanding what code does)
-- **Documentation** (making it readable)
-- **Engineering** (improving tools to help)
-
-The constraint of maintaining binary identity forces you to truly understand the code. Every label rename, every comment, every improvement must be earned through understanding.
-
-The result is a literate program that:
-- Assembles identically to the original
-- Tells a story about what it does
-- Can be maintained and modified
-- Serves as documentation for the binary
-
-Welcome to the art of reverse engineering!
+---
+
+## Pitfalls
+
+| Problem | Symptom | Fix |
+|---------|---------|-----|
+| ZP optimization | Assembled binary 1 byte shorter per occurrence | Add `.a` suffix to force absolute addressing |
+| Data as code | Garbage instructions in listing, round-trip fails | Mark region with `db` directives |
+| Missing header skip | First 4 bytes are wrong | Use `--offset 4` in disassembler |
+| Wrong comparison target | Diff shows header bytes as errors | Compare against `dd`-extracted code, not full file |
+| Branch to data | Analyzer misses a code path | Add extra entry points to analyzer (`-e`) |
+| Self-modifying code | Assembled code differs from runtime behavior | Document with comments; the static binary is still correct |
+| 65C02 undefined opcodes | Unknown opcode error | Emit as `db $XX` |
+
+---
+
+## Tips
+
+1. **Verify after every change.** `--compare` is cheap; debugging cascading errors is not.
+2. **Fix the first diff.** One wrong byte shifts everything after it. Always fix the earliest difference first.
+3. **Start with `db`, refine to macros.** Get data regions correct as raw bytes first, then convert to macros.
+4. **Use `dd` to extract comparison targets.** Never compare against a file with headers.
+5. **Keep the original binary untouched.** It's your ground truth.
+6. **Commit after each successful round-trip.** Version control is your friend.
+7. **Research the platform.** Knowing Apple II ROM calls, DOS conventions, and memory maps turns gibberish into understanding.
+8. **Strings reveal everything.** Finding readable text in data sections tells you what the program is.
+9. **Follow the call graph.** JSR targets are subroutines; understanding their contract (inputs, outputs, side effects) is the key to understanding the program.
+10. **Write macros for repeated data patterns.** If you see the same encoding 36 times, automate it.
+11. **Use equates for documentation, not code replacement.** Define all memory addresses in a reference section; keep code using literal addresses to avoid addressing mode mismatches. Equates are a cheat sheet for readers, not replacements in instructions.
+12. **Add a memory map section.** List all major address ranges with byte counts. This helps readers understand layout and makes finding things easier.
+13. **Document register preservation.** Note which registers are saved/restored. This is essential for understanding subroutine contracts.
+14. **Explain table-driven logic.** String tables, dispatch tables, and validation sub-tables are common in compact 6502 code. Document how indices map to entries.
+15. **Comment the non-obvious.** Bit shifts for slot numbers, BCD arithmetic, pointer arithmetic—these need explanation. Obvious code (like `iny`) needs fewer comments.

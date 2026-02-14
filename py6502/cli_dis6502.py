@@ -57,7 +57,7 @@ Examples:
     parser.add_argument(
         "--reassemble",
         action="store_true",
-        help="Output in re-assemblable format (compatible with py6502 assembler)",
+        help="Output format suitable for reassembly (org directive, no addresses in output)",
     )
 
     args = parser.parse_args(argv)

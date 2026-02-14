@@ -21,7 +21,7 @@ Examples:
   %(prog)s code.asm -o program.hex     # Assemble to program.hex
   %(prog)s code.asm -b program.bin     # Generate binary output too
   %(prog)s code.asm -v                 # Verbose output
-  %(prog)s code.asm --debug 2          # Debug level 2
+  %(prog)s code.asm -b program.bin --compare original.bin  # Verify with smart diff
         """,
     )
 
@@ -45,9 +45,9 @@ Examples:
     parser.add_argument("--listing", help="Generate assembly listing file")
     parser.add_argument("--symbols", help="Generate symbol table file")
     parser.add_argument(
-        "--verify",
+        "--compare",
         metavar="ORIGINAL",
-        help="Verify assembled binary matches original binary file (requires -b flag)",
+        help="Compare assembled binary against original with smart diff analysis (requires -b flag)",
     )
 
     args = parser.parse_args(argv)
@@ -58,15 +58,15 @@ Examples:
         print(f"Error: Input file '{args.input_file}' not found.", file=sys.stderr)
         return 1
 
-    # Check verify flag requirements
-    if args.verify and not args.binary:
-        print(f"Error: --verify requires --binary flag to be set.", file=sys.stderr)
+    # Check compare flag requirements
+    if args.compare and not args.binary:
+        print(f"Error: --compare requires --binary flag to be set.", file=sys.stderr)
         return 1
 
-    if args.verify:
-        verify_path = Path(args.verify)
-        if not verify_path.exists():
-            print(f"Error: Verify file '{args.verify}' not found.", file=sys.stderr)
+    if args.compare:
+        compare_path = Path(args.compare)
+        if not compare_path.exists():
+            print(f"Error: Compare file '{args.compare}' not found.", file=sys.stderr)
             return 1
 
     # Read input file
@@ -162,36 +162,65 @@ Examples:
                 print(f"Error writing symbol file: {e}", file=sys.stderr)
                 return 1
 
-        # Verify against original binary if requested
-        if args.verify:
+        # Compare against original binary if requested
+        if args.compare:
             try:
                 from py6502.diff6502 import Diff6502
-                
+
                 differ = Diff6502()
-                result = differ.compare_files(args.verify, args.binary, 
-                                             min_addr if used_addresses else 0)
-                
+                result = differ.compare_files(
+                    args.compare, args.binary, min_addr if used_addresses else 0
+                )
+
                 if result.get("identical"):
                     print(f"\n✓ ROUND-TRIP VERIFICATION SUCCESSFUL!")
-                    print(f"  Assembled binary matches original: {args.verify}")
+                    print(f"  Assembled binary matches original: {args.compare}")
                 else:
                     print(f"\n✗ ROUND-TRIP VERIFICATION FAILED!")
-                    print(f"  Assembled binary differs from original: {args.verify}")
-                    
-                    if result.get("first_diff"):
-                        diff = result["first_diff"]
-                        print(f"\n  First difference at offset {diff['offset']} (address ${diff['address']:04X}):")
-                        print(f"    Original: ${diff['byte1']:02X}")
-                        print(f"    Assembled: ${diff['byte2']:02X}")
-                    
-                    if "length_diff" in result:
-                        ld = result["length_diff"]
-                        print(f"\n  Length difference: {ld['extra_bytes']} bytes")
-                    
-                    print(f"\n  Run 'python3 py6502/cli_diff6502.py {args.verify} {args.binary} -v' for details")
+                    print(f"  Assembled binary differs from original: {args.compare}")
+                    print()
+
+                    # Print smart diff summary
+                    if result.get("differences"):
+                        print(f"Differences: {result['differences']} byte(s)")
+                        print(f"Original size:  {result['original_size']} bytes")
+                        print(f"Assembled size: {result['assembled_size']} bytes")
+
+                        if result.get("first_diff"):
+                            diff = result["first_diff"]
+                            print(
+                                f"\nFirst difference at offset 0x{diff['offset']:04X}:"
+                            )
+                            print(f"  Original:  ${diff['byte1']:02X}")
+                            print(f"  Assembled: ${diff['byte2']:02X}")
+
+                        if "length_diff" in result:
+                            ld = result["length_diff"]
+                            longer = (
+                                "assembled"
+                                if ld["shorter"] == "original"
+                                else "original"
+                            )
+                            print(
+                                f"\nLength difference: {ld['extra_bytes']} extra bytes in {longer} file"
+                            )
+
+                        # Print detected patterns
+                        if result.get("patterns"):
+                            print("\nDetected patterns:")
+                            for pattern in result["patterns"]:
+                                severity = f"[{pattern['severity']}]"
+                                print(f"  {severity} {pattern['type']}")
+                                print(f"       {pattern['description']}")
+
+                        print(f"\nRun for more details:")
+                        print(
+                            f"  python3 py6502/cli_diff6502.py {args.compare} {args.binary} -v"
+                        )
+
                     return 1
             except Exception as e:
-                print(f"Error during verification: {e}", file=sys.stderr)
+                print(f"Error during comparison: {e}", file=sys.stderr)
                 return 1
 
     except Exception as e:

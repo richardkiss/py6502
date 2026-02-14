@@ -33,6 +33,7 @@ class asm6502:
                 return (opcodestr, "")
             else:
                 return (opcodestr, remainderstr)
+
     def __init__(self, debug=0):
         # print "65C02 Assembler"
         self.debuglevel = debug
@@ -169,12 +170,16 @@ class asm6502:
             return opcode
         else:
             self.debug(3, f"check_opcode could not find opcode {opcode}")
-            self.warning(linenumber=linenumber, linetext="", text=f"unknown opcode {opcode}")
+            self.warning(
+                linenumber=linenumber, linetext="", text=f"unknown opcode {opcode}"
+            )
             return None
 
     def parse_line(self, thestring):
         # Check for macro definition: .macro name = module.function
-        macro_def_match = re.match(r"^\s*\.macro\s+(\w+)\s*=\s*(.+)\.(\w+)\s*$", thestring.strip())
+        macro_def_match = re.match(
+            r"^\s*\.macro\s+(\w+)\s*=\s*(.+)\.(\w+)\s*$", thestring.strip()
+        )
         if macro_def_match:
             name = macro_def_match.group(1)
             module_path = macro_def_match.group(2)
@@ -184,14 +189,16 @@ class asm6502:
             return
 
         # Check for constant/equate assignment: NAME = value
-        equate_match = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$", thestring.strip())
+        equate_match = re.match(
+            r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$", thestring.strip()
+        )
         if equate_match:
             name = equate_match.group(1)
             val = equate_match.group(2)
             # Try to parse value as int, hex, octal, or another constant
             if val.startswith("$"):
                 self.constants[name] = int(val[1:], 16)
-            elif val.startswith("@"): 
+            elif val.startswith("@"):
                 self.constants[name] = int(val[1:], 8)
             elif val.isdigit():
                 self.constants[name] = int(val)
@@ -201,7 +208,11 @@ class asm6502:
                 try:
                     self.constants[name] = int(val, 0)
                 except Exception:
-                    self.warning(linenumber, thestring, f"Could not parse constant value for {name}")
+                    self.warning(
+                        linenumber,
+                        thestring,
+                        f"Could not parse constant value for {name}",
+                    )
             self.debug(1, f"Constant assigned: {name} = {self.constants[name]}")
             return
 
@@ -266,7 +277,13 @@ class asm6502:
 
         # interpret extra bytes from the db, dw, ddw, dqw, text directives.
         extrabytes = []
-        if opcode == "db" or opcode == "dw" or opcode == "ddw" or opcode == "dqw" or opcode == "text":
+        if (
+            opcode == "db"
+            or opcode == "dw"
+            or opcode == "ddw"
+            or opcode == "dqw"
+            or opcode == "text"
+        ):
             num_extrabytes = self.count_extrabytes(opcode, operand)
         else:
             num_extrabytes = None
@@ -356,7 +373,9 @@ class asm6502:
             else:
                 premode = "number"
                 value = thestring
-        elif (thestring[0] in self.letters) and ((thestring != "A") and (thestring != "a")):
+        elif (thestring[0] in self.letters) and (
+            (thestring != "A") and (thestring != "a")
+        ):
             premode = "number"
             value = thestring
         elif (thestring[0] == "+") or (thestring[0] == "-"):
@@ -627,23 +646,25 @@ class asm6502:
             return 1
         # operand should be a quoted string
         operand = operand.strip()
-        if (operand.startswith('"') and operand.endswith('"')) or \
-           (operand.startswith("'") and operand.endswith("'")):
+        if (operand.startswith('"') and operand.endswith('"')) or (
+            operand.startswith("'") and operand.endswith("'")
+        ):
             text = operand[1:-1]
             # Process escape sequences
-            text = text.replace('\\n', '\n').replace('\\r', '\r').replace('\\t', '\t')
+            text = text.replace("\\n", "\n").replace("\\r", "\r").replace("\\t", "\t")
             return len(text) + 1  # +1 for null terminator
         return 1
 
     def _decode_text_string(self, operand):
         """Decode a .text directive string into bytes (with null terminator)."""
         operand = operand.strip()
-        if (operand.startswith('"') and operand.endswith('"')) or \
-           (operand.startswith("'") and operand.endswith("'")):
+        if (operand.startswith('"') and operand.endswith('"')) or (
+            operand.startswith("'") and operand.endswith("'")
+        ):
             text = operand[1:-1]
             # Process escape sequences
-            text = text.replace('\\n', '\n').replace('\\r', '\r').replace('\\t', '\t')
-            text = text.replace('\\0', '\x00')
+            text = text.replace("\\n", "\n").replace("\\r", "\r").replace("\\t", "\t")
+            text = text.replace("\\0", "\x00")
             result = [ord(c) for c in text]
             result.append(0)  # null terminator
             return result
@@ -738,7 +759,18 @@ class asm6502:
             "absoluteindirect",
         ]
 
-        self.validdirectives = ["db", "dw", "ddw", "dqw", "str", "org", "le", "be", "text", "python"]
+        self.validdirectives = [
+            "db",
+            "dw",
+            "ddw",
+            "dqw",
+            "str",
+            "org",
+            "le",
+            "be",
+            "text",
+            "python",
+        ]
 
         self.validopcodes = [
             "adc",
@@ -1635,7 +1667,13 @@ class asm6502:
 
         # interpret extra bytes from the db, dw, ddw, dqw, text directives.
         extrabytes = []
-        if opcode == "db" or opcode == "dw" or opcode == "ddw" or opcode == "dqw" or opcode == "text":
+        if (
+            opcode == "db"
+            or opcode == "dw"
+            or opcode == "ddw"
+            or opcode == "dqw"
+            or opcode == "text"
+        ):
             num_extrabytes = self.count_extrabytes(opcode, operand)
         else:
             num_extrabytes = None
@@ -1687,7 +1725,7 @@ class asm6502:
         if expand_macros:
             self.debug(1, "Macro Expansion (Pass 1 - size estimation)")
             lines = self.macro_expander.process_file(lines, pass_num=1)
-        
+
         for line in lines:
             self.parse_line(line)
 
