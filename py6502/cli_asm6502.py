@@ -44,6 +44,11 @@ Examples:
     )
     parser.add_argument("--listing", help="Generate assembly listing file")
     parser.add_argument("--symbols", help="Generate symbol table file")
+    parser.add_argument(
+        "--verify",
+        metavar="ORIGINAL",
+        help="Verify assembled binary matches original binary file (requires -b flag)",
+    )
 
     args = parser.parse_args(argv)
 
@@ -52,6 +57,17 @@ Examples:
     if not input_path.exists():
         print(f"Error: Input file '{args.input_file}' not found.", file=sys.stderr)
         return 1
+
+    # Check verify flag requirements
+    if args.verify and not args.binary:
+        print(f"Error: --verify requires --binary flag to be set.", file=sys.stderr)
+        return 1
+
+    if args.verify:
+        verify_path = Path(args.verify)
+        if not verify_path.exists():
+            print(f"Error: Verify file '{args.verify}' not found.", file=sys.stderr)
+            return 1
 
     # Read input file
     try:
@@ -144,6 +160,38 @@ Examples:
                 print(f"Symbol table written to: {args.symbols}")
             except Exception as e:
                 print(f"Error writing symbol file: {e}", file=sys.stderr)
+                return 1
+
+        # Verify against original binary if requested
+        if args.verify:
+            try:
+                from py6502.diff6502 import Diff6502
+                
+                differ = Diff6502()
+                result = differ.compare_files(args.verify, args.binary, 
+                                             min_addr if used_addresses else 0)
+                
+                if result.get("identical"):
+                    print(f"\n✓ ROUND-TRIP VERIFICATION SUCCESSFUL!")
+                    print(f"  Assembled binary matches original: {args.verify}")
+                else:
+                    print(f"\n✗ ROUND-TRIP VERIFICATION FAILED!")
+                    print(f"  Assembled binary differs from original: {args.verify}")
+                    
+                    if result.get("first_diff"):
+                        diff = result["first_diff"]
+                        print(f"\n  First difference at offset {diff['offset']} (address ${diff['address']:04X}):")
+                        print(f"    Original: ${diff['byte1']:02X}")
+                        print(f"    Assembled: ${diff['byte2']:02X}")
+                    
+                    if "length_diff" in result:
+                        ld = result["length_diff"]
+                        print(f"\n  Length difference: {ld['extra_bytes']} bytes")
+                    
+                    print(f"\n  Run 'python3 py6502/cli_diff6502.py {args.verify} {args.binary} -v' for details")
+                    return 1
+            except Exception as e:
+                print(f"Error during verification: {e}", file=sys.stderr)
                 return 1
 
     except Exception as e:

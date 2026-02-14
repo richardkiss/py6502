@@ -364,7 +364,7 @@ class dis6502:
             length = 3
         elif addrmode == "absolutex":
             if reassemble and operand16 <= 0xFF:
-                operandtext = f"[{operand16:02x}],x"
+                operandtext = f"${operand16:02x}.a,x"
             else:
                 operandtext = f"${operand16:04x},x"
             length = 3
@@ -386,11 +386,13 @@ class dis6502:
         elif addrmode == "implicit":
             operandtext = ""
             length = 1
-        elif addrmode == "":
-            operandtext = ""
-            length = 1
-        elif addrmode is None:
-            operandtext = ""
+        elif addrmode == "" or addrmode is None or opcode == "":
+            # Invalid opcode - treat as data byte in reassemble mode
+            if reassemble:
+                opcode = "db"
+                operandtext = f"${opcode_hex:02X}"
+            else:
+                operandtext = ""
             length = 1
         else:
             print(f"ERROR: Disassembler: Address mode {addrmode} not found")

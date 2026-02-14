@@ -1,7 +1,38 @@
 import re
+from py6502.macro6502 import MacroExpander
 
 
 class asm6502:
+    # Consider the next thing an opcode
+    # strip it and return the opcode with the remainder of the line
+    def strip_opcode(self, thestring, linenumber):
+        mystring = thestring.strip()
+        noopcode = False
+        noremainder = False
+        if len(mystring) == 0:
+            opcodestr = ""
+            remainderstr = ""
+            noopcode = True
+            noremainder = True
+        elif " " in mystring:
+            position = thestring.find(" ")
+            opcodestr = thestring[:position].strip()
+            remainderstr = thestring[position + 1 :].strip()
+            noopcode = False
+            noremainder = False
+        else:
+            opcodestr = mystring
+            remainderstr = ""
+            noopcode = False
+            noremainder = True
+
+        if noopcode:
+            return ("", "")
+        else:
+            if noremainder:
+                return (opcodestr, "")
+            else:
+                return (opcodestr, remainderstr)
     def __init__(self, debug=0):
         # print "65C02 Assembler"
         self.debuglevel = debug
@@ -22,6 +53,12 @@ class asm6502:
             self.object_code.append(-1)  # -1 indicate location not populated
 
         self.littleendian = True  # Use le and be directives to change this
+
+        self.constants = {}  # Store equates NAME = value
+
+        # Macro expansion support
+        self.macro_expander = MacroExpander(debug=debug > 0)
+        self.enable_macros = False
 
         self.genopcodelist()  # generate the tables
         self.build_opcode_map()
@@ -51,6 +88,11 @@ class asm6502:
         self.addressmmodelist = []
 
         self.littleendian = True  # Use le and be directives to change this
+
+        self.constants = {}  # Clear constants
+
+        # Reset macro expander state
+        self.macro_expander = MacroExpander(debug=self.debuglevel > 0)
 
         self.allstuff = []
         self.line = 1
@@ -108,89 +150,199 @@ class asm6502:
                 )
                 return (labelstr, returnstr)
 
-    # Consider the next thing an opcode
-    # strip it and return the opcode with the remainder of the line
-    def strip_opcode(self, thestring, linenumber):
-        mystring = thestring.strip()
-        noopcode = False
-        noremainder = False
-        if len(mystring) == 0:
-            opcodestr = ""
-            remainderstr = ""
-            noopcode = True
-            noremainder = True
-        elif " " in mystring:
-            position = thestring.find(" ")
-            opcodestr = thestring[:position].strip()
-            remainderstr = thestring[position + 1 :].strip()
-            noopcode = False
-            noremainder = False
-        else:
-            opcodestr = mystring
-            remainderstr = ""
-            noopcode = False
-            noremainder = True
-
-        if noopcode:
-            # print "no opcode or remainder"
-            return ("", "")
-        else:
-            if noremainder:
-                # print "opcode %s but no remainder" % opcodestr
-                return (opcodestr, "")
-            else:
-                # print "opcode %s with remainder %s" % (opcodestr,remainderstr)
-                return (opcodestr, remainderstr)
-
     def check_opcode(self, opcode_in, linenumber):
         opcode = opcode_in.lower()
         if opcode == "":
             self.debug(3, "check_opcode returning null")
             return None
+        elif opcode == "macro":
+            # .macro directive for registering macros
+            self.debug(3, f"check_opcode found .macro directive")
+            return "macro"
         elif opcode in self.validopcodes:
             self.opcodelist.append((linenumber, opcode))
             self.debug(3, f"check_opcode found {opcode} in validopcodes")
             return opcode
         elif opcode in self.validdirectives:
             self.opcodelist.append((linenumber, opcode))
-            self.debug(3, f"check_opcode found {opcode} in validirectives")
+            self.debug(3, f"check_opcode found {opcode} in validdirectives")
             return opcode
         else:
-            self.debug(3, f"check_opcode could not find opcode {opcode} ")
-            self.warning(
-                linenumber=linenumber, linetext="", text=f"unknown opcode {opcode}"
-            )
+            self.debug(3, f"check_opcode could not find opcode {opcode}")
+            self.warning(linenumber=linenumber, linetext="", text=f"unknown opcode {opcode}")
             return None
 
+    def parse_line(self, thestring):
+        # Check for macro definition: .macro name = module.function
+        macro_def_match = re.match(r"^\s*\.macro\s+(\w+)\s*=\s*(.+)\.(\w+)\s*$", thestring.strip())
+        if macro_def_match:
+            name = macro_def_match.group(1)
+            module_path = macro_def_match.group(2)
+            function_name = macro_def_match.group(3)
+            self.macro_expander.register_macro(name, module_path, function_name)
+            self.debug(1, f"Macro registered: {name} = {module_path}.{function_name}")
+            return
+
+        # Check for constant/equate assignment: NAME = value
+        equate_match = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$", thestring.strip())
+        if equate_match:
+            name = equate_match.group(1)
+            val = equate_match.group(2)
+            # Try to parse value as int, hex, octal, or another constant
+            if val.startswith("$"):
+                self.constants[name] = int(val[1:], 16)
+            elif val.startswith("@"): 
+                self.constants[name] = int(val[1:], 8)
+            elif val.isdigit():
+                self.constants[name] = int(val)
+            elif val in self.constants:
+                self.constants[name] = self.constants[val]
+            else:
+                try:
+                    self.constants[name] = int(val, 0)
+                except Exception:
+                    self.warning(linenumber, thestring, f"Could not parse constant value for {name}")
+            self.debug(1, f"Constant assigned: {name} = {self.constants[name]}")
+            return
+
+        mystring, comment = self.strip_comments(thestring)
+        labelstring, mystring = self.strip_label(mystring, linenumber)
+        opcode_anycase, operand = self.strip_opcode(mystring, linenumber)
+        opcode = self.check_opcode(opcode_anycase, linenumber)
+        premode, value = self.identify_addressmodeformat(operand, linenumber)
+        addressmode = self.identify_addressmode(opcode, premode, value, linenumber)
+        self.debug(3, f"PARSE LINE: opcode={str(opcode)}  addressmode={addressmode}")
+        if (opcode is not None) and (addressmode != "UNDECIDED"):
+            astring = opcode + addressmode
+            self.debug(3, f"PARSE LINE 2 astring={astring}")
+            if astring in self.hexmap:
+                self.debug(
+                    3,
+                    f"PARSE LINE 3 astring={astring}  self.hexmap[astring]=0x{self.hexmap[astring]:x}",
+                )
+                opcode_val = self.hexmap[astring]
+            else:
+                opcode_val = None
+        else:
+            opcode_val = None
+            astring = ""
+
+        if addressmode == "relative" and premode == "offset":
+            lowbyte = self.decode_offset(value)
+            highbyte = None
+        elif self.addrmode_length(addressmode) == 0:
+            lowbyte = None
+            highbyte = None
+        elif (self.addrmode_length(addressmode) == 1) and (
+            self.decode_value(value) != -1
+        ):
+            lowbyte = self.decode_value(value) & 0x00FF
+            highbyte = None
+        elif (self.addrmode_length(addressmode) == 2) and (
+            self.decode_value(value) != -1
+        ):
+            lowbyte = self.decode_value(value) & 0x00FF
+            highbyte = ((self.decode_value(value) & 0xFF00) >> 8) & 0x00FF
+        elif (self.addrmode_length(addressmode) == 1) and (
+            self.decode_value(value) == -1
+        ):
+            lowbyte = -1
+            highbyte = None
+        elif (self.addrmode_length(addressmode) == 2) and (
+            self.decode_value(value) == -1
+        ):
+            lowbyte = -1
+            highbyte = -1
+        else:
+            lowbyte = None
+            highbyte = None
+        offset = -1
+
+        # Handle switches between little endian and big endian
+        if opcode == "le":
+            self.littleendian = True
+        if opcode == "be":
+            self.littleendian = False
+
+        # interpret extra bytes from the db, dw, ddw, dqw, text directives.
+        extrabytes = []
+        if opcode == "db" or opcode == "dw" or opcode == "ddw" or opcode == "dqw" or opcode == "text":
+            num_extrabytes = self.count_extrabytes(opcode, operand)
+        else:
+            num_extrabytes = None
+
+        # We are moving the extrabytes parsing to pass 3, so we can
+        # add label addresses into DWs and have the label defined when we need it.
+        #
+        # if (opcode=="db") and (operand != None) and (len(operand) > 0):
+        #    extrabytes = self.decode_extrabytes(linenumber, thestring, operand)
+        # elif (opcode=="dw") and (operand != None) and (len(operand) > 0):
+        #    extrabytes = self.decode_extrawords(linenumber, thestring, operand)
+        # elif (opcode=="ddw") and (operand != None) and (len(operand) > 0):
+        #    extrabytes = self.decode_extradoublewords(linenumber, thestring, operand)
+        # elif (opcode=="dqw") and (operand != None) and (len(operand) > 0):
+        #    extrabytes = self.decode_extraquadwords(linenumber, thestring, operand)
+
+        linetext = thestring
+        thetuple = (
+            offset,
+            linenumber,
+            labelstring,
+            opcode_val,
+            lowbyte,
+            highbyte,
+            opcode,
+            operand,
+            addressmode,
+            value,
+            comment,
+            extrabytes,
+            num_extr_bytes,
+            linetext,
+        )
+        self.allstuff.append(thetuple)
+        self.firstpasstext(thetuple)
+
+        self.debug(2, f"addressmode = {addressmode}")
+        self.debug(2, str(self.allstuff[linenumber - 1]))
+        self.debug(2, "-----------------------")
+
+    # Fix indentation and variable scope in identify_addressmodeformat
     def identify_addressmodeformat(self, remainderstr, linenumber):
-        # remove all whitespace
         thestring = remainderstr.replace(" ", "")
         if thestring == "":
             premode = "nothing"
             value = ""
         elif thestring[0] == "#":
-            # It's immediate
             premode = "immediate"
             value = thestring[1:]
         elif (thestring == "a") or (thestring == "A"):
             premode = "accumulator"
             value = ""
-        elif re.search(r"""^\((.*),[xX]\)$""", thestring):
+        elif re.search(r"^\((.*),[xX]\)$", thestring):
             premode = "bracketedindexedx"
-            b = re.search(r"""^\((.*),[xX]\)$""", thestring)
+            b = re.search(r"^\((.*),[xX]\)$", thestring)
             value = b.group(1)
-        elif re.search(r"""^\((.*)\),[yY]$""", thestring):
+        elif re.search(r"^\((.*)\),[yY]$", thestring):
             premode = "bracketedcommay"
-            b = re.search(r"""^\((.*)\),[yY]$""", thestring)
+            b = re.search(r"^\((.*)\),[yY]$", thestring)
             value = b.group(1)
-        elif re.search("""^(.*),[xX]$""", thestring):
-            b = re.search("""^(.*),[xX]$""", thestring)
+        elif re.search(r"^(.*),[xX]$", thestring):
+            b = re.search(r"^(.*),[xX]$", thestring)
             value = b.group(1)
-            premode = "numbercommax"
-        elif re.search("""^(.*),[yY]$""", thestring):
-            b = re.search("""^(.*),[yY]$""", thestring)
+            if value.endswith(".a"):
+                premode = "numbercommax_a"
+                value = value[:-2]
+            else:
+                premode = "numbercommax"
+        elif re.search(r"^(.*),[yY]$", thestring):
+            b = re.search(r"^(.*),[yY]$", thestring)
             value = b.group(1)
-            premode = "numbercommay"
+            if value.endswith(".a"):
+                premode = "numbercommay_a"
+                value = value[:-2]
+            else:
+                premode = "numbercommay"
         elif (
             (thestring[0] == "$")
             or (thestring[0] == "@")
@@ -198,30 +350,27 @@ class asm6502:
             or (thestring[0] == "&")
             or (thestring[0] in self.decimal_digits)
         ):
-            # Check for .a suffix
             if thestring.endswith(".a"):
                 premode = "number_a"
                 value = thestring[:-2]
             else:
                 premode = "number"
                 value = thestring
-        elif (thestring[0] in self.letters) and (
-            (thestring != "A") or (thestring != "a")
-        ):
+        elif (thestring[0] in self.letters) and ((thestring != "A") and (thestring != "a")):
             premode = "number"
             value = thestring
         elif (thestring[0] == "+") or (thestring[0] == "-"):
             premode = "offset"
             value = thestring
-        elif re.search(r"""^\((.*),[xX]\)$""", thestring):
+        elif re.search(r"^\((.*),[xX]\)$", thestring):
             premode = "bracketedindexedx"
-            b = re.search(r"""^\((.*),[xX]\)$""", thestring)
+            b = re.search(r"^\((.*),[xX]\)$", thestring)
             value = b.group(1)
-        elif re.search(r"""^\((.*)\),[yY]$""", thestring):
+        elif re.search(r"^\((.*)\),[yY]$", thestring):
             premode = "bracketedcommay"
-            b = re.search(r"""^\((.*)\),[yY]$""", thestring)
+            b = re.search(r"^\((.*)\),[yY]$", thestring)
             value = b.group(1)
-        elif re.search(r"""^\(.*\)$""", thestring):
+        elif re.search(r"^\(.*\)$", thestring):
             premode = "bracketed"
             value = thestring[1:-1]
         elif thestring[0] in self.letters:
@@ -235,13 +384,7 @@ class asm6502:
             )
             premode = "nothing"
             value = ""
-
         self.debug(2, f"premode = {premode}, value = {value}")
-        # We've classified the basic formats in premode
-        # some formats mean different things with different instructions
-        # E.G. a number is an offset with a branch but absolute with a load
-        # So we need to cross check the combinations of instruction with format
-        # to derive the actual address mode and whether or not it is allowed.
         return (premode, value)
 
     #   Address mode        format                    name applied
@@ -265,6 +408,10 @@ class asm6502:
     def identify_addressmode(self, opcode, premode, value, linenumber):
         if premode == "number_a":
             return "absolute"
+        if premode == "numbercommax_a":
+            return "absolutex"
+        if premode == "numbercommay_a":
+            return "absolutey"
         if (opcode in self.implicitopcodes) and (premode == "nothing"):
             return "implicit"
         if (opcode in self.immediateopcodes) and (premode == "immediate"):
@@ -427,6 +574,12 @@ class asm6502:
 
     # Just count the number of bytes without working out what they are
     def count_extrabytes(self, opcode, operand):
+        if opcode == "text":
+            # For .text, operand is a quoted string
+            # Count actual bytes it will generate
+            return self._count_text_bytes(operand)
+        if operand is None or len(operand) == 0:
+            return 0
         count = len(operand.split(","))
         if opcode == "db":
             return count
@@ -468,6 +621,34 @@ class asm6502:
                 return emptylist
         return newlist
 
+    def _count_text_bytes(self, operand):
+        """Count bytes that a .text directive will produce."""
+        if operand is None or len(operand) == 0:
+            return 1
+        # operand should be a quoted string
+        operand = operand.strip()
+        if (operand.startswith('"') and operand.endswith('"')) or \
+           (operand.startswith("'") and operand.endswith("'")):
+            text = operand[1:-1]
+            # Process escape sequences
+            text = text.replace('\\n', '\n').replace('\\r', '\r').replace('\\t', '\t')
+            return len(text) + 1  # +1 for null terminator
+        return 1
+
+    def _decode_text_string(self, operand):
+        """Decode a .text directive string into bytes (with null terminator)."""
+        operand = operand.strip()
+        if (operand.startswith('"') and operand.endswith('"')) or \
+           (operand.startswith("'") and operand.endswith("'")):
+            text = operand[1:-1]
+            # Process escape sequences
+            text = text.replace('\\n', '\n').replace('\\r', '\r').replace('\\t', '\t')
+            text = text.replace('\\0', '\x00')
+            result = [ord(c) for c in text]
+            result.append(0)  # null terminator
+            return result
+        return [0]
+
     def decode_extrabytes(self, linenumber, linetext, s):
         newstring = "["
 
@@ -499,22 +680,24 @@ class asm6502:
         if s.endswith(".a"):
             s = s[:-2]
 
+        # Substitute constant value if present
+        if s in self.constants:
+            return self.constants[s]
+
+        if len(s) == 0:
+            return -1
         if s[0] == "$":
             ns = int(s[1:], 16)
             return ns
-
         if s[0] == "@":
             ns = int(s[1:], 8)
             return ns
-
         if s[0] == "%":
             ns = int(s[1:], 2)
             return ns
-
         if s[0] in self.decimal_digits:
             ns = int(s)
             return ns
-
         return -1
 
     #   Address mode        format                    name applied
@@ -555,7 +738,7 @@ class asm6502:
             "absoluteindirect",
         ]
 
-        self.validdirectives = ["db", "dw", "ddw", "dqw", "str", "org", "le", "be"]
+        self.validdirectives = ["db", "dw", "ddw", "dqw", "str", "org", "le", "be", "text", "python"]
 
         self.validopcodes = [
             "adc",
@@ -1450,9 +1633,9 @@ class asm6502:
         if opcode == "be":
             self.littleendian = False
 
-        # interpret extra bytes from the db, dw, ddw, dqw directives.
+        # interpret extra bytes from the db, dw, ddw, dqw, text directives.
         extrabytes = []
-        if opcode == "db" or opcode == "dw" or opcode == "ddw" or opcode == "dqw":
+        if opcode == "db" or opcode == "dw" or opcode == "ddw" or opcode == "dqw" or opcode == "text":
             num_extrabytes = self.count_extrabytes(opcode, operand)
         else:
             num_extrabytes = None
@@ -1494,11 +1677,17 @@ class asm6502:
         self.debug(2, "-----------------------")
 
     # Perform the three passes of the assembly
-    def assemble(self, lines):
+    def assemble(self, lines, expand_macros=True):
         self.clear_state()
+        self.enable_macros = expand_macros
 
         # First pass, parse each line for label, opcode, operand and comments
+        # Macros are expanded with pass_num=1 for size estimation
         self.debug(1, "First Pass")
+        if expand_macros:
+            self.debug(1, "Macro Expansion (Pass 1 - size estimation)")
+            lines = self.macro_expander.process_file(lines, pass_num=1)
+        
         for line in lines:
             self.parse_line(line)
 
@@ -1633,6 +1822,8 @@ class asm6502:
             # populate the extrabytes lists
             if (opcode == "db") and (operand is not None) and (len(operand) > 0):
                 extrabytes = self.decode_extrabytes(linenumber, linetext, operand)
+            elif (opcode == "text") and (operand is not None) and (len(operand) > 0):
+                extrabytes = self._decode_text_string(operand)
             elif (opcode == "dw") and (operand is not None) and (len(operand) > 0):
                 extrabytes = self.decode_extrawords(linenumber, linetext, operand)
             elif (opcode == "ddw") and (operand is not None) and (len(operand) > 0):
