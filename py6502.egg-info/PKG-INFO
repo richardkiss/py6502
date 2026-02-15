@@ -37,6 +37,29 @@ Requires-Dist: pytest>=7.0.0; extra == "test"
 Requires-Dist: pytest-cov>=4.0.0; extra == "test"
 
 A python based 6502 assembler, disassembler and simulator
+
+FORK ENHANCEMENTS (v1.0.0)
+==========================
+This fork adds production-ready tools for reverse engineering 6502 binaries
+into literate assembly with binary-identical round-trip verification.
+
+NEW FEATURES:
+- CLI tools: a6502 (assembler), d6502 (disassembler), s6502 (simulator)
+- Round-trip verification with smart binary diffing (--compare flag)
+- Disassembler --reassemble mode for binary-identical reassembly
+- Integrated macro system with Apple II string support (@apple2_str)
+- .a suffix to force absolute addressing for zero-page addresses
+- 69 comprehensive tests (round-trip, CLI, macros)
+- Modern packaging (pyproject.toml, installable via uv/pip)
+
+See CHANGELOG.md for complete list of enhancements.
+See SKILLS.md for reverse engineering workflow documentation.
+
+Original py6502 by David Johnston (https://github.com/dj-on-github/py6502/)
+
+==========================
+
+A python based 6502 assembler, disassembler and simulator
 David Johnston
 
 The Philosophy

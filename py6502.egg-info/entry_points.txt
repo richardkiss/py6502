@@ -1,5 +1,4 @@
 [console_scripts]
 a6502 = py6502.cli_asm6502:main
 d6502 = py6502.cli_dis6502:main
-db6502 = py6502.cli_debugger:main
 s6502 = py6502.cli_sim6502:main
