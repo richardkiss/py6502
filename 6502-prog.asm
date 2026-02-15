@@ -462,49 +462,49 @@ loc_08a1:
 
 setup_operation:
 ; Subroutine called 1 time(s) from: $0815
- jsr  $fc58
- lda  #$0f
- sta  $24
- lda  $13ae
- clc
- adc  #$28
- tax
- jsr  print_string
- lda  #$03
- sta  $22
- jsr  $fc58
- lda  $13ac
- ldx  #$0a
- jsr  find_in_table
- bne  +$07
- lda  #$00
- sta  $13ad
- beq  +$37
+ jsr  $fc58              ; HOME: clear screen, cursor to top-left
+ lda  #$0f              ; Load cursor column 15
+ sta  $24                ; Set CH (horizontal position) for operation name
+ lda  $13ae              ; Load menu option index (0-8)
+ clc                     ; Clear carry
+ adc  #$28               ; Add 40 (offset to operation name strings)
+ tax                     ; Transfer to X for string index
+ jsr  print_string       ; Display operation name
+ lda  #$03              ; Load window left margin
+ sta  $22                ; Set WNDLFT for setup prompts
+ jsr  $fc58              ; HOME: clear screen again
+ lda  $13ac              ; Load operation selection character
+ ldx  #$0a              ; Check if operation needs NO disk setup
+ jsr  find_in_table      ; Search in no-setup-needed list
+ bne  +$07               ; If found, skip disk setup
+ lda  #$00               ; Load 0 (no setup flag)
+ sta  $13ad              ; Store setup state
+ beq  +$37               ; Branch to return
 loc_0903:
- ldx  #$0d
- jsr  find_in_table
- bne  +$20
- lda  #$01
- cmp  $13ad
- beq  +$29
- sta  $13ad
- jsr  get_slot_drive
- lda  #$00
- sta  $1323
- lda  $131e
- sta  $131d
- lda  $1320
- sta  $131f
- bne  +$10
+ ldx  #$0d              ; Check if COPY operation
+ jsr  find_in_table      ; Search for COPY character
+ bne  +$20               ; If not COPY, handle single-disk ops
+ lda  #$01               ; State 1: getting source disk
+ cmp  $13ad              ; Compare with setup state
+ beq  +$29               ; If already set, continue
+ sta  $13ad              ; Store state 1
+ jsr  get_slot_drive     ; Get source disk parameters
+ lda  #$00               ; Load 0 (different disks)
+ sta  $1323              ; Clear SAME_DISK_FLAG
+ lda  $131e              ; Load source drive
+ sta  $131d              ; Store as dest drive (temporary)
+ lda  $1320              ; Load source slot
+ sta  $131f              ; Store as dest slot (temporary)
+ bne  +$10               ; Branch to get destination
 loc_092a:
- lda  #$02
- cmp  $13ad
- beq  +$09
- sta  $13ad
- jsr  get_slot_drive
- jsr  get_dest_slot_drive
+ lda  #$02               ; State 2: getting destination disk
+ cmp  $13ad              ; Compare with setup state
+ beq  +$09               ; If already set, continue
+ sta  $13ad              ; Store state 2
+ jsr  get_slot_drive     ; Prompt for source disk
+ jsr  get_dest_slot_drive; Prompt for destination disk
 loc_093a:
- rts
+ rts                     ; Return to caller
 
 ; ============================================
 ; SUBROUTINE at $093B
@@ -522,42 +522,42 @@ loc_093a:
 
 get_slot_drive:
 ; Subroutine called 2 time(s) from: $0914, $0934
- ldx  #$00
- jsr  print_string
- jsr  $fd6f
- cpx  #$01
- bne  +$0b
- lda  $0200
- cmp  #$b1
- bcc  +$04
- cmp  #$b8
- bcc  +$08
+ ldx  #$00               ; String index 0: "SLOT #1-7?" prompt
+ jsr  print_string       ; Display slot prompt
+ jsr  $fd6f              ; GETLN: read user input
+ cpx  #$01               ; Check if exactly 1 character
+ bne  +$0b               ; If not, invalid
+ lda  $0200              ; Load input character
+ cmp  #$b1               ; Compare with ASCII '1' ($B1)
+ bcc  +$04               ; If less, invalid
+ cmp  #$b8               ; Compare with ASCII '8' ($B8)
+ bcc  +$08               ; If less, valid range (1-7)
 loc_0952:
- ldx  #$22
- jsr  beep_and_print
- jmp  get_slot_drive
+ ldx  #$22               ; String index 34: "INVALID SLOT" error
+ jsr  beep_and_print     ; Ring bell and display error
+ jmp  get_slot_drive     ; Retry slot input
 loc_095a:
- and  #$07
- sta  $1320
+ and  #$07               ; Mask to extract slot number (1-7)
+ sta  $1320              ; Store in SOURCE_SLOT
 loc_095f:
- ldx  #$01
- jsr  print_string
- jsr  $fd6f
- cpx  #$01
- bne  +$0b
- lda  $0200
- cmp  #$b1
- bcc  +$04
- cmp  #$b3
- bcc  +$08
+ ldx  #$01               ; String index 1: "DRIVE #1-2?" prompt
+ jsr  print_string       ; Display drive prompt
+ jsr  $fd6f              ; GETLN: read user input
+ cpx  #$01               ; Check if exactly 1 character
+ bne  +$0b               ; If not, invalid
+ lda  $0200              ; Load input character
+ cmp  #$b1               ; Compare with ASCII '1' ($B1)
+ bcc  +$04               ; If less, invalid
+ cmp  #$b3               ; Compare with ASCII '3' ($B3)
+ bcc  +$08               ; If less, valid range (1-2)
 loc_0976:
- ldx  #$23
- jsr  beep_and_print
- jmp  loc_095f
+ ldx  #$23               ; String index 35: "INVALID DRIVE" error
+ jsr  beep_and_print     ; Ring bell and display error
+ jmp  loc_095f           ; Retry drive input
 loc_097e:
- and  #$07
- sta  $131e
- rts
+ and  #$07               ; Mask to extract drive number (1-2)
+ sta  $131e              ; Store in SOURCE_DRIVE
+ rts                     ; Return with slot/drive validated
 
 ; ============================================
 ; SUBROUTINE at $0984
@@ -1022,30 +1022,30 @@ loc_0b3e:
 
 process_files:
 ; Subroutine called 1 time(s) from: $0831
- lda  $1323
- beq  +$03
- jsr  wait_key_cr
+ lda  $1323              ; Load SAME_DISK_FLAG
+ beq  +$03               ; If 0, skip wait prompt
+ jsr  wait_key_cr        ; If same disk, wait for source disk
 loc_0b48:
- jsr  init_catalog_read
+ jsr  init_catalog_read  ; Load first catalog sector
 loc_0b4b:
- ldy  $139f
- cpy  #$00
- bne  +$06
- jsr  check_more_sectors
- bcc  +$01
- rts
+ ldy  $139f              ; Load entries remaining counter
+ cpy  #$00               ; Check if zero
+ bne  +$06               ; If entries remain, skip sector check
+ jsr  check_more_sectors ; Check for more catalog sectors
+ bcc  +$01               ; If carry clear (more sectors), continue
+ rts                     ; If carry set (done), return
 loc_0b58:
- jsr  process_catalog_entry
- bcc  -$12
- jsr  $0d59
- lda  $13a9
- beq  +$0b
- lda  $1323
- beq  -$1f
- jsr  wait_key_cr
- jmp  loc_0b4b
+ jsr  process_catalog_entry; Process catalog entry
+ bcc  -$12               ; If carry clear, loop back
+ jsr  $0d59              ; Update disk
+ lda  $13a9              ; Load HAS_WILDCARD flag
+ beq  +$0b               ; If no wildcard, skip same-disk check
+ lda  $1323              ; Load SAME_DISK_FLAG
+ beq  -$1f               ; If different disks, loop back
+ jsr  wait_key_cr        ; If same disk, wait for disk swap
+ jmp  loc_0b4b           ; Loop back to process more entries
 loc_0b70:
- rts
+ rts                     ; Return to caller
 
 ; ============================================
 ; SUBROUTINE at $0B71
@@ -1062,16 +1062,16 @@ loc_0b70:
 
 init_catalog_read:
 ; Subroutine called 1 time(s) from: $0b48
- ldy  #$01
- ldx  #$01
- jsr  $1185
- lda  $1952
- sta  $1a52
- lda  $1953
- sta  $1a53
- lda  #$00
- sta  $139f
- rts
+ ldy  #$01               ; Load Y=1 (catalog sector index)
+ ldx  #$01               ; Load X=1 (read buffer 1)
+ jsr  $1185              ; DOS: read sector into buffer
+ lda  $1952              ; Load sector size low byte
+ sta  $1a52              ; Store working copy
+ lda  $1953              ; Load sector size high byte
+ sta  $1a53              ; Store working copy
+ lda  #$00               ; Load 0
+ sta  $139f              ; Clear entries remaining counter
+ rts                     ; Return with buffer ready
 
 ; ============================================
 ; SUBROUTINE at $0B8A
@@ -1347,56 +1347,165 @@ loc_0bea:
  ldx  #$0e
  jsr  print_string
  rts
- bit  $1325
- bmi  +$08
- lda  #$07
- sta  $18f9
- jsr  $1266
- ldx  #$0e
- jsr  print_string
- rts
- bit  $1325
- bpl  +$08
- lda  #$08
- sta  $18f9
- jsr  $1266
- ldx  #$0e
- jsr  print_string
- rts
- lda  #$06
- sta  $18f9
- jsr  $1266
- rts
- lda  #$00
- sta  $13ac
- ldx  #$0e
- jsr  print_string
- rts
- lda  #$0c
- sta  $18f9
- jsr  $1266
- ldx  #$0e
- jsr  print_string
- rts
- pla
- pla
- lda  #$00
- sta  $22
- jsr  $fc58
- jmp  $03d3
- lda  #$00
- sta  $1395
- sta  $1396
- sta  $1397
- sta  $1398
- ldy  #$01
- ldx  #$01
- jsr  $1185
- ldy  #$00
- jsr  $0e1b
- iny
- cpy  $1985
- bne  -$09
+; ============================================================================
+; HANDLER at $0D84: LOCK FILES
+; ============================================================================
+; Write-protect selected files by setting bit 7 in FILE_STATUS ($1325).
+;
+; OPERATION:
+;   1. Test FILE_STATUS byte (bit 7 = write-protect flag)
+;   2. If already locked, show "already locked" error message
+;   3. If not locked, set DOS parameter block with lock operation code
+;   4. Invoke file manager via $1266 subroutine
+;   5. Display completion message and return
+;
+; INPUT:
+;   FILE_STATUS ($1325) - File status byte from catalog entry
+;
+; EXIT:
+;   File marked as write-protected (bit 7 set in catalog)
+;   Message displayed to user
+;
+; REGISTERS: A, X (modified by called routines)
+;
+; NOTES:
+;   - BIT instruction affects N flag from bit 7 of operand
+;   - BMI = Branch if Minus (N=1, bit 7 set = already locked)
+;   - Error code $07 = LOCK operation in DOS parameter block
+;   - String index $0E = status message for file operation
+;
+; BYTES: 19 ($0D84-$0D96)
+; ============================================================================
+ bit  $1325             ; Test FILE_STATUS ($1325): set N flag from bit 7
+                        ; Bit 7 = 1 (N=1) means file is already locked ($80)
+                        ; Bit 7 = 0 (N=0) means file is not locked
+ bmi  +$08              ; Branch if Minus: jump +8 bytes if N flag set
+                        ; Takes branch if bit 7 was set (file already locked)
+                        ; Does NOT take branch if bit 7 was clear (not locked)
+ lda  #$07              ; Load accumulator with $07 (LOCK operation code)
+                        ; This value identifies the operation to DOS file manager
+ sta  $18f9             ; Store operation code at $18F9
+                        ; $18F9 is part of DOS FM parameter block
+ jsr  $1266             ; Jump to subroutine at $1266
+                        ; Invokes DOS file manager with operation code in parameter block
+                        ; File manager reads catalog, modifies FILE_STATUS, writes back
+ ldx  #$0e              ; Load X register with $0E (string index 14)
+                        ; String 14 = operation completion/status message
+ jsr  print_string      ; Jump to subroutine at $0ACD (via print_string label)
+                        ; Displays the status message from string table
+ rts                    ; Return from Subroutine
+                        ; Pops return address from stack (pushed by RTS dispatch)
+; ============================================================================
+; HANDLER at $0D97: UNLOCK FILES
+; ============================================================================
+; Remove write-protection from selected files by clearing bit 7 in FILE_STATUS.
+;
+; OPERATION:
+;   1. Test FILE_STATUS byte (bit 7 = write-protect flag)
+;   2. If not locked, show "not locked" error message
+;   3. If locked, set DOS parameter block with unlock operation code
+;   4. Invoke file manager via $1266 subroutine
+;   5. Display completion message and return
+;
+; INPUT:
+;   FILE_STATUS ($1325) - File status byte from catalog entry
+;
+; EXIT:
+;   Write-protection removed from file (bit 7 cleared in catalog)
+;   Message displayed to user
+;
+; REGISTERS: A, X (modified by called routines)
+;
+; NOTES:
+;   - BPL = Branch if Plus (N=0, bit 7 clear = not locked)
+;   - Opposite logic of LOCK handler
+;   - Error code $08 = UNLOCK operation in DOS parameter block
+;   - String index $0E = status message for file operation
+;
+; BYTES: 19 ($0D97-$0DA9)
+; ============================================================================
+ bit  $1325             ; Test FILE_STATUS ($1325): set N flag from bit 7
+                        ; Bit 7 = 1 (N=1) means file is locked ($80)
+                        ; Bit 7 = 0 (N=0) means file is not locked
+ bpl  +$08              ; Branch if Plus: jump +8 bytes if N flag clear
+                        ; Takes branch if bit 7 was clear (file not locked) - ERROR
+                        ; Does NOT take branch if bit 7 was set (file is locked) - OK
+ lda  #$08              ; Load accumulator with $08 (UNLOCK operation code)
+                        ; This value identifies the operation to DOS file manager
+ sta  $18f9             ; Store operation code at $18F9
+                        ; $18F9 is part of DOS FM parameter block
+ jsr  $1266             ; Jump to subroutine at $1266
+                        ; Invokes DOS file manager with operation code in parameter block
+                        ; File manager reads catalog, modifies FILE_STATUS, writes back
+ ldx  #$0e              ; Load X register with $0E (string index 14)
+                        ; String 14 = operation completion/status message
+ jsr  print_string      ; Jump to subroutine at $0ACD (via print_string label)
+                        ; Displays the status message from string table
+ rts                    ; Return from Subroutine
+                        ; Pops return address from stack (pushed by RTS dispatch)
+; ============================================================================
+; HANDLER at $0DAA: CATALOG FILES
+; ============================================================================
+; Display catalog (directory) of files on selected disk.
+; [Phase 7.6 - Implementation to be documented]
+; ============================================================================
+ lda  #$06              ; Load operation code for CATALOG
+ sta  $18f9             ; Store in DOS parameter block
+ jsr  $1266             ; Call DOS file manager
+ rts                    ; Return to caller
+; ============================================================================
+; HANDLER at $0DB3: RESET SLOT & DRIVE
+; ============================================================================
+; Update default slot and drive numbers for disk operations.
+; [Phase 7.8 - Implementation to be documented]
+; ============================================================================
+ lda  #$00              ; Load value for RESET operation
+ sta  $13ac             ; Store in parameter location
+ ldx  #$0e              ; Load string index for message
+ jsr  print_string      ; Display status message
+ rts                    ; Return to caller
+; ============================================================================
+; HANDLER at $0DBE: VERIFY FILES
+; ============================================================================
+; Verify file integrity by reading and checking each sector.
+; [Phase 7.4 - Implementation to be documented]
+; ============================================================================
+ lda  #$0c              ; Load operation code for VERIFY
+ sta  $18f9             ; Store in DOS parameter block
+ jsr  $1266             ; Call DOS file manager
+ ldx  #$0e              ; Load string index for message
+ jsr  print_string      ; Display status message
+ rts                    ; Return to caller
+; ============================================================================
+; HANDLER at $0DCC: QUIT
+; ============================================================================
+; Exit FID and return control to DOS/BASIC prompt.
+; ============================================================================
+ pla                    ; Pop return address high byte
+ pla                    ; Pop return address low byte
+ lda  #$00              ; Load value to clear window
+ sta  $22               ; Store in window left margin
+ jsr  $fc58             ; HOME: clear screen, move cursor to top-left
+ jmp  $03d3             ; Jump to DOS warm start ($03D3)
+; ============================================================================
+; HANDLER at $0DD8: SPACE ON DISK
+; ============================================================================
+; Display free and used sectors on selected disk using sector bitmap.
+; [Phase 7.7 - Implementation to be documented]
+; ============================================================================
+ lda  #$00              ; Initialize free sector counter low byte
+ sta  $1395             ; Store in $1395
+ sta  $1396             ; Initialize high byte
+ sta  $1397             ; Initialize used sector counter low byte
+ sta  $1398             ; Initialize high byte
+ ldy  #$01              ; Load Y=1 (sector index)
+ ldx  #$01              ; Load X=1 (buffer number)
+ jsr  $1185             ; DOS: read sector into buffer
+ ldy  #$00              ; Reset Y for bitmap scanning
+ jsr  $0e1b             ; Call subroutine to process sector bitmap
+ iny                    ; Increment counter
+ cpy  $1985             ; Compare with end marker
+ bne  -$09              ; Loop if more sectors to process
  lda  $1396
  jsr  $fdda
  lda  $1395
