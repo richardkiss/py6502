@@ -94,7 +94,7 @@ end: jsr do_nothing
         """
     sta $00.a
     lda $10.a,x
-    ldy $20.a,y
+    lda $20.a,y
     """,
     ),
 ]
