@@ -1335,18 +1335,65 @@ loc_0bea:
  lda  $13ca,y
  pha
  rts
- lda  $1325
- and  #$80
- beq  +$06
- ldx  #$12
- jsr  print_string
- rts
- lda  #$05
- sta  $18f9
- jsr  $1266
- ldx  #$0e
- jsr  print_string
- rts
+; ============================================================================
+; HANDLER at $0D69: DELETE FILES
+; ============================================================================
+; Remove files from disk by marking catalog entry as deleted and freeing sectors.
+;
+; OPERATION:
+;   1. Test FILE_STATUS byte (bit 7 = file attribute flag)
+;   2. If bit 7 is clear, show "already deleted" or invalid file error message
+;   3. If bit 7 is set, set DOS parameter block with delete operation code
+;   4. Invoke file manager via $1266 subroutine
+;   5. Display completion message and return
+;
+; INPUT:
+;   FILE_STATUS ($1325) - File status byte from catalog entry
+;
+; EXIT:
+;   File marked as deleted in catalog (filename zeroed out)
+;   File sectors marked as available in sector bitmap
+;   Message displayed to user
+;
+; REGISTERS: A, X (modified by called routines)
+;
+; NOTES:
+;   - AND #$80 tests bit 7 of FILE_STATUS
+;   - BEQ = Branch if Equal to zero (Z flag set when bit 7 is clear)
+;   - Error condition: bit 7 clear (file already deleted or invalid state)
+;   - Error code $05 = DELETE operation in DOS parameter block
+;   - String index $12 = "file already deleted" or error message
+;   - String index $0E = operation completion/status message
+;
+; BYTES: 20 ($0D69-$0D7C)
+; ============================================================================
+ lda  $1325             ; Load FILE_STATUS byte from catalog entry
+                        ; Bit 7 indicates valid file (1=valid, 0=deleted/invalid)
+ and  #$80              ; Test bit 7 with mask $80
+                        ; Sets Z flag if result is 0 (bit 7 was clear = invalid)
+                        ; Clears Z flag if result is nonzero (bit 7 was set = valid)
+ beq  +$06              ; Branch if Equal: jump +6 bytes if Z flag set
+                        ; Takes branch if bit 7 was clear (error condition)
+                        ; Does NOT take branch if bit 7 was set (file is valid)
+ ldx  #$12              ; Load X register with $12 (string index 18)
+                        ; String 18 = "FILE ALREADY DELETED" or invalid file message
+ jsr  print_string      ; Jump to subroutine at $0ACD (via print_string label)
+                        ; Displays the error message and returns
+ rts                    ; Return from Subroutine
+                        ; Pops return address from stack (pushed by RTS dispatch)
+ lda  #$05              ; Load accumulator with $05 (DELETE operation code)
+                        ; This value identifies the delete operation to DOS file manager
+ sta  $18f9             ; Store operation code at $18F9
+                        ; $18F9 is part of DOS FM parameter block
+ jsr  $1266             ; Jump to subroutine at $1266
+                        ; Invokes DOS file manager with operation code in parameter block
+                        ; File manager: zeros filename, marks sectors in bitmap, writes back
+ ldx  #$0e              ; Load X register with $0E (string index 14)
+                        ; String 14 = operation completion/status message
+ jsr  print_string      ; Jump to subroutine at $0ACD (via print_string label)
+                        ; Displays the completion status message to user
+ rts                    ; Return from Subroutine
+                        ; Pops return address from stack (pushed by RTS dispatch)
 ; ============================================================================
 ; HANDLER at $0D84: LOCK FILES
 ; ============================================================================
@@ -1447,35 +1494,117 @@ loc_0bea:
 ; HANDLER at $0DAA: CATALOG FILES
 ; ============================================================================
 ; Display catalog (directory) of files on selected disk.
-; [Phase 7.6 - Implementation to be documented]
+;
+; OPERATION:
+;   1. Load DOS CATALOG operation code
+;   2. Store in DOS file manager parameter block
+;   3. Invoke DOS file manager to display catalog
+;   4. Return to main menu
+;
+; EXIT:
+;   Catalog displayed to user (via DOS file manager at $1266)
+;   Returns to main menu
+;
+; REGISTERS: A, X, Y (modified by called routines)
+;
+; NOTES:
+;   - Operation code $06 = CATALOG operation in DOS parameter block
+;   - DOS file manager handles all display formatting and output
+;   - This is a simple wrapper that invokes the DOS routine
+;   - File manager displays: filename, file type, size in sectors, lock status
+;   - No additional processing needed in FID for catalog display
+;
+; BYTES: 9 ($0DAA-$0DB2)
 ; ============================================================================
- lda  #$06              ; Load operation code for CATALOG
- sta  $18f9             ; Store in DOS parameter block
- jsr  $1266             ; Call DOS file manager
- rts                    ; Return to caller
+ lda  #$06              ; Load accumulator with $06 (CATALOG operation code)
+                        ; This value identifies the catalog operation to DOS file manager
+ sta  $18f9             ; Store operation code at $18F9
+                        ; $18F9 is part of DOS FM parameter block
+ jsr  $1266             ; Jump to subroutine at $1266
+                        ; Invokes DOS file manager to display disk catalog
+                        ; File manager reads catalog sector, displays each file entry
+ rts                    ; Return from Subroutine
+                        ; Pops return address from stack (pushed by RTS dispatch)
+                        ; Returns control to main menu loop
 ; ============================================================================
 ; HANDLER at $0DB3: RESET SLOT & DRIVE
 ; ============================================================================
-; Update default slot and drive numbers for disk operations.
-; [Phase 7.8 - Implementation to be documented]
+; Reset disk operation parameters and return to main menu.
+;
+; OPERATION:
+;   1. Clear menu selection character
+;   2. Display "DONE" confirmation message
+;   3. Return to main menu loop
+;
+; EXIT:
+;   MENU_CHAR ($13AC) = $00 (clears current selection)
+;   Message displayed to user
+;   Returns to main loop for next operation
+;
+; REGISTERS: A, X (modified by called routines)
+;
+; NOTES:
+;   - This is a simple confirmation handler
+;   - Does NOT actually change slot/drive variables during execution
+;   - Slot/drive are configured by setup_operation when file operation selected
+;   - RESET option allows user to return to menu without performing operation
+;   - Clearing $13AC (MENU_CHAR) resets selection state
+;   - String index $0E = "DONE\n" (completion message)
+;
+; BYTES: 11 ($0DB3-$0DBD)
 ; ============================================================================
- lda  #$00              ; Load value for RESET operation
- sta  $13ac             ; Store in parameter location
- ldx  #$0e              ; Load string index for message
- jsr  print_string      ; Display status message
- rts                    ; Return to caller
+ lda  #$00              ; Load accumulator with $00
+                        ; Clear value to reset menu selection state
+ sta  $13ac             ; Store $00 in MENU_CHAR ($13AC)
+                        ; This clears the current menu selection
+ ldx  #$0e              ; Load X register with $0E (string index 14)
+                        ; String 14 = "DONE\n" completion message
+ jsr  print_string      ; Jump to subroutine at $0ACD (via print_string label)
+                        ; Displays the "DONE" message to user
+ rts                    ; Return from Subroutine
+                        ; Pops return address from stack (pushed by RTS dispatch)
+                        ; Returns control to main loop
 ; ============================================================================
 ; HANDLER at $0DBE: VERIFY FILES
 ; ============================================================================
 ; Verify file integrity by reading and checking each sector.
-; [Phase 7.4 - Implementation to be documented]
+;
+; OPERATION:
+;   1. Load DOS VERIFY operation code
+;   2. Store in DOS file manager parameter block
+;   3. Invoke DOS file manager to verify selected files
+;   4. Display completion message and return
+;
+; EXIT:
+;   File verification completed (via DOS file manager at $1266)
+;   Completion message displayed to user
+;   Returns to main menu
+;
+; REGISTERS: A, X (modified by called routines)
+;
+; NOTES:
+;   - Operation code $0C = VERIFY operation in DOS parameter block
+;   - DOS file manager traverses file's T/S (track/sector) list
+;   - Attempts to read each sector to verify accessibility
+;   - Reports any read errors or bad sectors encountered
+;   - String index $0E = "DONE\n" (completion message)
+;
+; BYTES: 15 ($0DBE-$0DCC)
 ; ============================================================================
- lda  #$0c              ; Load operation code for VERIFY
- sta  $18f9             ; Store in DOS parameter block
- jsr  $1266             ; Call DOS file manager
- ldx  #$0e              ; Load string index for message
- jsr  print_string      ; Display status message
- rts                    ; Return to caller
+ lda  #$0c              ; Load accumulator with $0C (VERIFY operation code)
+                        ; This value identifies the verify operation to DOS file manager
+ sta  $18f9             ; Store operation code at $18F9
+                        ; $18F9 is part of DOS FM parameter block
+ jsr  $1266             ; Jump to subroutine at $1266
+                        ; Invokes DOS file manager to verify file sectors
+                        ; File manager reads each sector, reports any errors
+ ldx  #$0e              ; Load X register with $0E (string index 14)
+                        ; String 14 = "DONE\n" completion message
+ jsr  print_string      ; Jump to subroutine at $0ACD (via print_string label)
+                        ; Displays the completion message to user
+ rts                    ; Return from Subroutine
+                        ; Pops return address from stack (pushed by RTS dispatch)
+                        ; Returns control to main menu loop
 ; ============================================================================
 ; HANDLER at $0DCC: QUIT
 ; ============================================================================
@@ -1491,34 +1620,94 @@ loc_0bea:
 ; HANDLER at $0DD8: SPACE ON DISK
 ; ============================================================================
 ; Display free and used sectors on selected disk using sector bitmap.
-; [Phase 7.7 - Implementation to be documented]
+;
+; OPERATION:
+;   1. Initialize sector counters (free and used sectors)
+;   2. Read sector bitmap from track $11 (DOS VTOC sector)
+;   3. Scan each byte of bitmap to count free vs used sectors
+;   4. Display free sector count in BCD format
+;   5. Display used sector count in BCD format
+;   6. Return to main menu
+;
+; EXIT:
+;   Free sector count displayed (BCD format, high digit then low digit)
+;   Used sector count displayed (BCD format, high digit then low digit)
+;   Returns to main menu
+;
+; REGISTERS: A, X, Y (modified extensively, saved/restored as needed)
+;
+; NOTES:
+;   - Sector bitmap on track $11 (VTOC track)
+;   - Each bit in bitmap represents one sector (1=free, 0=used)
+;   - Sector counters: $1395 (free low), $1396 (free high BCD)
+;                      $1397 (used low), $1398 (used high BCD)
+;   - $1985 is end-of-bitmap marker
+;   - $FDDA is Apple II COUT routine (output accumulator in decimal)
+;   - String index $1B = "FREE SECTORS:" display message
+;   - String index $1C = "USED SECTORS:" display message
+;   - Bitmap scanning done by subroutine at $0E1B
+;
+; BYTES: 62 ($0DD8-$1815) - includes sector bitmap processing loop
 ; ============================================================================
- lda  #$00              ; Initialize free sector counter low byte
- sta  $1395             ; Store in $1395
- sta  $1396             ; Initialize high byte
- sta  $1397             ; Initialize used sector counter low byte
- sta  $1398             ; Initialize high byte
- ldy  #$01              ; Load Y=1 (sector index)
- ldx  #$01              ; Load X=1 (buffer number)
- jsr  $1185             ; DOS: read sector into buffer
- ldy  #$00              ; Reset Y for bitmap scanning
- jsr  $0e1b             ; Call subroutine to process sector bitmap
- iny                    ; Increment counter
- cpy  $1985             ; Compare with end marker
- bne  -$09              ; Loop if more sectors to process
- lda  $1396
- jsr  $fdda
- lda  $1395
- jsr  $fdda
- ldx  #$1b
- jsr  print_string
- lda  $1398
- jsr  $fdda
- lda  $1397
- jsr  $fdda
- ldx  #$1c
- jsr  print_string
- rts
+ lda  #$00              ; Load accumulator with $00
+                        ; Initialize free sector counter value
+ sta  $1395             ; Store in FREE_SECT_LOW ($1395)
+                        ; Low byte of free sector counter (units digit)
+ sta  $1396             ; Store in FREE_SECT_HIGH ($1396)
+                        ; High byte of free sector counter (tens digit in BCD)
+ sta  $1397             ; Store in USED_SECT_LOW ($1397)
+                        ; Low byte of used sector counter (units digit)
+ sta  $1398             ; Store in USED_SECT_HIGH ($1398)
+                        ; High byte of used sector counter (tens digit in BCD)
+ ldy  #$01              ; Load Y register with $01
+                        ; Sector index for VTOC (track $11, sector 1)
+ ldx  #$01              ; Load X register with $01
+                        ; DOS buffer number (read into buffer 1)
+ jsr  $1185             ; Jump to subroutine at $1185
+                        ; DOS: read sector into memory buffer
+                        ; Loads sector bitmap from track $11, sector 1
+ ldy  #$00              ; Load Y register with $00
+                        ; Initialize byte offset for bitmap scanning
+ jsr  $0e1b             ; Jump to subroutine at $0E1B
+                        ; Process sector bitmap: count free vs used sectors
+                        ; Scans each byte, updates $1395-$1398 counters
+ iny                    ; Increment Y register
+                        ; Move to next sector/block in bitmap
+ cpy  $1985             ; Compare Y with value at $1985
+                        ; $1985 contains end-of-bitmap marker
+ bne  -$09              ; Branch if Not Equal: loop back if more to scan
+                        ; Loop continues until all bitmap sectors processed
+ lda  $1396             ; Load accumulator with FREE_SECT_HIGH ($1396)
+                        ; High digit (tens) of free sector count
+ jsr  $fdda             ; Jump to subroutine at $FDDA
+                        ; Apple II COUT: output accumulator as decimal digit
+                        ; Displays tens digit of free sectors
+ lda  $1395             ; Load accumulator with FREE_SECT_LOW ($1395)
+                        ; Low digit (units) of free sector count
+ jsr  $fdda             ; Jump to subroutine at $FDDA
+                        ; Apple II COUT: output accumulator as decimal digit
+                        ; Displays units digit of free sectors
+ ldx  #$1b              ; Load X register with $1B (string index 27)
+                        ; String 27 = "FREE SECTORS:" label text
+ jsr  print_string      ; Jump to subroutine at $0ACD (via print_string label)
+                        ; Displays the "FREE SECTORS:" label message
+ lda  $1398             ; Load accumulator with USED_SECT_HIGH ($1398)
+                        ; High digit (tens) of used sector count
+ jsr  $fdda             ; Jump to subroutine at $FDDA
+                        ; Apple II COUT: output accumulator as decimal digit
+                        ; Displays tens digit of used sectors
+ lda  $1397             ; Load accumulator with USED_SECT_LOW ($1397)
+                        ; Low digit (units) of used sector count
+ jsr  $fdda             ; Jump to subroutine at $FDDA
+                        ; Apple II COUT: output accumulator as decimal digit
+                        ; Displays units digit of used sectors
+ ldx  #$1c              ; Load X register with $1C (string index 28)
+                        ; String 28 = "USED SECTORS:" label text
+ jsr  print_string      ; Jump to subroutine at $0ACD (via print_string label)
+                        ; Displays the "USED SECTORS:" label message
+ rts                    ; Return from Subroutine
+                        ; Pops return address from stack (pushed by RTS dispatch)
+                        ; Returns control to main menu loop
  tya
  pha
  asl  A
@@ -1561,123 +1750,353 @@ loc_0bea:
  pla
  tay
  rts
- jsr  $100e
- jsr  $1082
- lda  $1323
- beq  +$03
- jsr  wait_key_cr2
- jsr  $0eb4
- jmp  $0e8d
- lda  $1323
- beq  +$03
- jsr  wait_key_cr
- jsr  $1082
- lda  $1323
- beq  +$03
- jsr  wait_key_cr2
- jsr  $1133
- bit  $131a
- bmi  +$14
- ldy  $139e
- cpy  #$f4
- bne  -$22
- lda  $1c52
- ora  $1c53
- bne  -$2a
- jsr  $10e4
- ldx  #$00
- ldy  #$00
- jsr  $1185
- ldx  #$0e
- jsr  print_string
- rts
- jsr  $0ee7
- lda  $190f
- sta  $1399
- lda  $1910
- sta  $139b
- ldx  #$05
- lda  $192e,x
- pha
- dex
- bpl  -$07
- jsr  $1005
- ldx  #$00
- pla
- sta  $192e,x
- inx
- cpx  #$06
- bcc  -$09
- ldy  #$01
- ldx  #$00
- jsr  $1185
- lda  #$ff
- sta  $1393
- rts
- jsr  $0f15
- lda  $1325
- sta  $1900
- ldx  #$00
- lda  #$01
- sta  $18f9
- jsr  $1266
- lda  $190f
- sta  $1399
- lda  $1910
- sta  $139b
- lda  $1324
- sta  $192c
- lda  $192f
- asl  A
- asl  A
+; ============================================================================
+; HANDLER at $0E66: COPY FILES
+; ============================================================================
+; Copy files from source disk to destination disk (or same disk with swap).
+;
+; OPERATION:
+;   1. Get source filename pattern from user
+;   2. Initialize source disk (read catalog and file list)
+;   3. For each matching file:
+;      a. Check if file already exists on destination
+;      b. Prompt user if destination exists (replace? cancel?)
+;      c. Read source file sector-by-sector into buffer
+;      d. Write sectors to destination disk location
+;      e. Update destination disk catalog and bitmap
+;   4. Handle disk swap logic if copying on same disk
+;   5. Display copy results/errors
+;   6. Return to main menu
+;
+; INPUT:
+;   User provides:
+;   - Filename pattern (with optional '=' wildcards)
+;   - Source slot/drive (if not COPY - single disk mode)
+;   - Destination slot/drive (if COPY - two disk mode)
+;   - Replace existing file (Y/N if destination file exists)
+;
+; EXIT:
+;   Files copied to destination disk
+;   Destination catalog updated
+;   Destination sector bitmap updated
+;   Results/error messages displayed
+;
+; REGISTERS: A, X, Y (heavily used throughout)
+;
+; KEY VARIABLES:
+;   $131D-$131F    Destination slot/drive (set in setup_operation)
+;   $1320-$1322    Source slot/drive (set in setup_operation)
+;   $1323          SAME_DISK_FLAG ($FF if source == destination)
+;   $1324          FILE_TYPE (type of current file being copied)
+;   $1325          FILE_STATUS (write-protect and other flags)
+;   $192C+          DOS parameter block for file operations
+;   $1C52-$1C53    Source file track/sector list position
+;   $192E-$1933    File attribute save buffer (6 bytes)
+;   $190F-$1910    Current file track/sector info
+;   $1399-$139B    Destination file track/sector info
+;   $139D-$139E    T/S list position tracking
+;   $1374-$1391    Filename backup buffer (30 bytes)
+;
+; SUBROUTINES CALLED:
+;   $100E          get_source_filename - Get user's source pattern
+;   $1082          init_disk_operation - Set up source disk
+;   $0EB4          wait_key_dialog - Prompt user
+;   wait_key_cr    Wait for key with CR, handle SAME_DISK_FLAG
+;   wait_key_cr2   Wait for key with CR (different logic path)
+;   $1133          process_source_files - Main copy loop
+;   $0EE7          ???? (helper subroutine)
+;   $1005          ???? (helper subroutine)
+;   $10E4          ???? (helper subroutine)
+;   $1185          DOS: read sector into buffer
+;   $0F15          check_destination_space - Verify destination has room
+;   $FF3A          (Apple II ROM: likely display/input routine)
+;   $FC1A          (Apple II ROM: likely clear/reset routine)
+;   $1266          DOS file manager - execute operation
+;   beep_and_print Print error message with bell
+;
+; COMPLEXITY: ⭐⭐⭐⭐⭐ VERY HIGH
+;   - Multi-sector file handling
+;   - Disk swap logic and prompting
+;   - Source/destination management
+;   - Error recovery and validation
+;   - File attribute preservation
+;   - Catalog and bitmap updates
+;
+; NOTES:
+;   [Phase 7.5 - Framework documented, internal logic requires further analysis]
+;   - Operation code $01 and $02 used for DOS file operations
+;   - Operation code $05 = UNLOCK
+;   - Operation code $08 = LOCK
+;   This handler is the most complex in FID, requiring careful tracing of:
+;   • Sector I/O sequences
+;   • DOS parameter block manipulation
+;   • File attribute copying
+;   • Error handling paths
+;   • Disk swap user interaction
+;   • Destination file conflict resolution
+;
+; BYTES: ~150-200 ($0E66-$0F9F estimated, extends into subroutines)
+; ============================================================================
+; === COPY HANDLER MAIN ENTRY ($0E66) ===
+; Get source filename and initialize source disk
+ jsr  $100e             ; Jump to subroutine at $100E
+                        ; get_source_filename: Get filename pattern from user
+                        ; User enters pattern with optional '=' wildcards
+                        ; Stores filename in $132B (max 30 chars)
+ jsr  $1082             ; Jump to subroutine at $1082
+                        ; init_disk_operation: Initialize source disk
+                        ; Reads source disk catalog into buffer
+                        ; Sets up file enumeration
+; Check if source and destination are same disk (SAME_DISK_FLAG)
+ lda  $1323             ; Load SAME_DISK_FLAG ($1323)
+                        ; $FF = source and destination same disk (copy within disk)
+                        ; $00 = different disks (normal copy operation)
+ beq  +$03              ; Branch if Equal: skip if different disks
+                        ; If $1323 is 0 (not same disk), skip next call
+ jsr  wait_key_cr2      ; Jump to subroutine (conditional)
+                        ; Handle same-disk copy prompting
+                        ; Prompts user to swap source/dest disks as needed
+ jsr  $0eb4             ; Jump to subroutine at $0EB4
+                        ; Process source file catalog and start copy loop
+ jmp  $0e8d             ; Jump to address $0E8D
+                        ; Skip alternative path, go to main copy loop
+; Alternative path for same-disk copy
+ lda  $1323             ; Load SAME_DISK_FLAG again (in alternative path)
+                        ; This is for the different-disks case
+ beq  +$03              ; Branch if Equal: skip if same disk
+                        ; If different disks, skip next call
+ jsr  wait_key_cr       ; Jump to subroutine (conditional)
+                        ; Alternate disk prompt handler
+ jsr  $1082             ; Jump to subroutine at $1082
+                        ; init_disk_operation: Re-initialize disk (different source)
+ lda  $1323             ; Load SAME_DISK_FLAG (third check)
+                        ; Verify disk configuration
+ beq  +$03              ; Branch if Equal
+ jsr  wait_key_cr2      ; Jump to subroutine (conditional)
+                        ; Final disk prompt if needed
+ jsr  $1133             ; Jump to subroutine at $1133
+                        ; process_source_files: Main copy processing loop
+                        ; Iterates through matching files, performs copy
+; Check completion status and handle errors
+ bit  $131a             ; Test byte at $131A
+                        ; Bit test loads and tests byte, sets N flag from bit 7
+                        ; $131A contains error/status flags
+ bmi  +$14              ; Branch if Minus: jump +20 bytes if bit 7 set (error)
+                        ; If error detected, skip cleanup, display error
+ ldy  $139e             ; Load Y with value at $139E
+                        ; T/S list max position tracker
+ cpy  #$f4              ; Compare Y with $F4 (244 decimal)
+                        ; Check if T/S list scan is complete
+ bne  -$22              ; Branch if Not Equal: loop back -34 bytes if not done
+                        ; Continue scanning if more entries to process
+ lda  $1c52             ; Load accumulator with low byte at $1C52
+                        ; Source file track/sector position (low)
+ ora  $1c53             ; Bitwise OR with high byte at $1C53
+                        ; Source file track/sector position (high)
+                        ; Combined check: non-zero means more data to read
+ bne  -$2a              ; Branch if Not Equal: loop back -42 bytes if data remains
+                        ; Continue loop if source file not fully processed
+ jsr  $10e4             ; Jump to subroutine at $10E4
+                        ; Final cleanup subroutine
+ ldx  #$00              ; Load X register with $00
+ ldy  #$00              ; Load Y register with $00
+ jsr  $1185             ; Jump to subroutine at $1185
+                        ; DOS: read sector into buffer (final operation)
+ ldx  #$0e              ; Load X register with $0E (string index 14)
+                        ; String 14 = "DONE\n" completion message
+ jsr  print_string      ; Jump to subroutine at $0ACD (via print_string label)
+                        ; Display completion message
+ rts                    ; Return from Subroutine
+                        ; Pops return address from stack
+                        ; Returns to main menu loop
+; === FILE ATTRIBUTE PRESERVATION HELPER ($0EE7 continuation) ===
+; Save and restore file attributes (type, protection, etc.)
+ jsr  $0ee7             ; Jump to subroutine at $0EE7
+                        ; Get current file attributes from source catalog
+; Copy track/sector list pointers to destination area
+ lda  $190f             ; Load accumulator with high byte at $190F
+                        ; Source file track/sector list pointer (high)
+ sta  $1399             ; Store in destination area $1399
+                        ; SAVED_TRACK: Destination T/S high byte
+ lda  $1910             ; Load accumulator with low byte at $1910
+                        ; Source file track/sector list pointer (low)
+ sta  $139b             ; Store in destination area $139B
+                        ; SAVED_SECTOR: Destination T/S low byte
+; Save file attributes buffer (type, size info) - 6 bytes
+ ldx  #$05              ; Load X register with $05
+                        ; Loop counter for 6 bytes (0-5)
+ lda  $192e,x           ; Load accumulator from $192E+X
+                        ; Read file attribute byte from source buffer
+                        ; $192E-$1933 contains file attributes (6 bytes)
+ pha                    ; Push accumulator onto stack
+                        ; Save attribute byte on stack
+ dex                    ; Decrement X register
+                        ; Move to previous byte in attribute buffer
+ bpl  -$07              ; Branch if Plus: loop back if X >= 0
+                        ; Continue until all 6 bytes saved on stack
+; Restore attributes from stack
+ jsr  $1005             ; Jump to subroutine at $1005
+                        ; Apply saved attributes to destination
+ ldx  #$00              ; Load X register with $00
+                        ; Initialize index for attribute restoration
+ pla                    ; Pull accumulator from stack
+                        ; Restore first attribute byte (last pushed = first popped)
+ sta  $192e,x           ; Store in $192E+X
+                        ; Restore attribute byte to buffer
+ inx                    ; Increment X register
+                        ; Move to next destination byte
+ cpx  #$06              ; Compare X with $06 (6 bytes)
+                        ; Check if all attributes restored
+ bcc  -$09              ; Branch if Carry Clear: loop back if X < 6
+                        ; Continue until all 6 bytes restored
+; Initialize destination file sector
+ ldy  #$01              ; Load Y register with $01
+                        ; Sector index for destination file
+ ldx  #$00              ; Load X register with $00
+                        ; DOS buffer number
+ jsr  $1185             ; Jump to subroutine at $1185
+                        ; DOS: read sector into buffer
+                        ; Read first destination sector for file header
+ lda  #$ff              ; Load accumulator with $FF
+                        ; Maximum value flag
+ sta  $1393             ; Store in FILE_COUNT ($1393)
+                        ; Mark file index as initialized ($FF)
+ rts                    ; Return from Subroutine
+; === DESTINATION FILE SETUP SECTION ===
+; Check destination disk space and initialize write operation
+ jsr  $0f15             ; Jump to subroutine at $0F15
+                        ; check_destination_space: Verify room on destination
+                        ; Checks disk bitmap for available sectors
+ lda  $1325             ; Load accumulator with FILE_STATUS ($1325)
+                        ; File status/protection flags from source
+ sta  $1900             ; Store in destination buffer $1900
+                        ; Copy status to destination file area
+ ldx  #$00              ; Load X register with $00
+                        ; Initialize for DOS operation
+ lda  #$01              ; Load accumulator with $01
+                        ; DOS operation code for file read
+ sta  $18f9             ; Store operation code at $18F9
+                        ; DOS parameter block operation field
+ jsr  $1266             ; Jump to subroutine at $1266
+                        ; DOS file manager: execute read operation
+                        ; Reads destination sector for initialization
+; Setup destination T/S list tracking
+ lda  $190f             ; Load accumulator with source T/S high byte
+                        ; Source track/sector pointer (high)
+ sta  $1399             ; Store in SAVED_TRACK ($1399)
+                        ; Initialize destination track counter
+ lda  $1910             ; Load accumulator with source T/S low byte
+                        ; Source track/sector pointer (low)
+ sta  $139b             ; Store in SAVED_SECTOR ($139B)
+                        ; Initialize destination sector counter
+; Copy file type to destination
+ lda  $1324             ; Load accumulator with FILE_TYPE ($1324)
+                        ; File type from source catalog (B, T, A, I, etc.)
+ sta  $192c             ; Store in $192C
+                        ; Destination file type area in DOS parameter block
+; Calculate and store file size information
+ lda  $192f             ; Load accumulator with $192F
+                        ; File size information byte
+ asl  A                 ; Arithmetic Shift Left
+                        ; Multiply by 2
+ asl  A                 ; Arithmetic Shift Left
  sta  $1392
  rts
- ldx  #$01
- lda  #$01
- sta  $18f9
- jsr  $1266
- lda  $1903
- cmp  #$06
- bne  +$01
- rts
- jsr  $fd8e
- jsr  $ff3a
- jsr  $ff3a
- ldx  #$06
- jsr  print_string
- ldx  #$07
- jsr  print_string
- ldx  #$19
- jsr  print_string
- jsr  $fd6f
- cpx  #$00
- beq  +$4f
- lda  $0200
- cmp  #$83
- bne  +$0c
- ldx  #$1a
- jsr  print_string
- pla
- pla
- pla
- pla
- pla
- pla
- rts
- ldy  #$1d
- lda  $132b,y
- sta  $1374,y
- lda  #$a0
- sta  $132b,y
- dey
- bpl  -$0e
- ldy  #$ff
- iny
- cmp  $0200,y
- beq  -$06
- lda  $0200,y
- cmp  #$c0
- bcc  +$54
+; === SECTOR READ INITIALIZATION ($0F05+) ===
+; Set up for reading source file sectors
+ ldx  #$01              ; Load X register with $01
+                        ; DOS buffer number for sector read
+ lda  #$01              ; Load accumulator with $01
+                        ; DOS operation code for read
+ sta  $18f9             ; Store operation code at $18F9
+                        ; DOS parameter block
+ jsr  $1266             ; Jump to subroutine at $1266
+                        ; DOS file manager: execute read operation
+                        ; Reads first sector of source file
+ lda  $1903             ; Load accumulator with $1903
+                        ; DOS operation result/status byte
+ cmp  #$06              ; Compare with $06
+                        ; Check if read was successful
+ bne  +$01              ; Branch if Not Equal: skip if error
+                        ; If result is not $06, an error occurred
+ rts                    ; Return from Subroutine
+                        ; Success path: return with data loaded
+; === FILE DIALOG & USER PROMPTING ===
+; Display file information and get user confirmation
+ jsr  $fd8e             ; Jump to subroutine at $FD8E
+                        ; Apple II ROM: carriage return/newline
+ jsr  $ff3a             ; Jump to subroutine at $FF3A
+                        ; Apple II ROM: clear line or display control
+ jsr  $ff3a             ; Jump to subroutine at $FF3A
+                        ; Apple II ROM: second control sequence
+ ldx  #$06              ; Load X register with $06 (string index 6)
+                        ; String 6: Display format/filename template
+ jsr  print_string      ; Jump to subroutine at $0ACD
+                        ; Display catalog file format string
+ ldx  #$07              ; Load X register with $07 (string index 7)
+                        ; String 7: Additional file information
+ jsr  print_string      ; Jump to subroutine at $0ACD
+                        ; Display file information
+ ldx  #$19              ; Load X register with $19 (string index 25)
+                        ; String 25: Filename or prompt text
+ jsr  print_string      ; Jump to subroutine at $0ACD
+                        ; Display filename prompt
+ jsr  $fd6f             ; Jump to subroutine at $FD6F
+                        ; Apple II ROM: GETLN - get line input from user
+ cpx  #$00              ; Compare X with $00
+                        ; Check input length (X = number of chars)
+ beq  +$4f              ; Branch if Equal: jump +79 bytes if no input
+                        ; If user entered nothing, skip copy logic
+; Check user response to file prompt
+ lda  $0200             ; Load accumulator with $0200
+                        ; First character of user input
+ cmp  #$83              ; Compare with $83 (Apple II code for 'C')
+                        ; Check if user pressed 'C' to cancel
+ bne  +$0c              ; Branch if Not Equal: skip if not 'C'
+                        ; If not cancel, continue with copy
+ ldx  #$1a              ; Load X register with $1A (string index 26)
+                        ; String 26: "COPY CANCELLED" or similar message
+ jsr  print_string      ; Jump to subroutine at $0ACD
+                        ; Display cancellation message
+ pla                    ; Pull return address high byte from stack
+ pla                    ; Pull return address low byte from stack
+ pla                    ; Pull additional stack values (cleanup)
+ pla                    ; Pull additional stack values (cleanup)
+ pla                    ; Pull additional stack values (cleanup)
+ pla                    ; Pull additional stack values (cleanup)
+ rts                    ; Return from Subroutine
+                        ; Exit copy operation, return to menu
+; === FILENAME BACKUP & RESTORATION ===
+; Save current filename and prepare for modification
+ ldy  #$1d              ; Load Y register with $1D (30 decimal)
+                        ; Loop counter for filename length
+ lda  $132b,y           ; Load accumulator from $132B+Y
+                        ; Read byte from filename buffer
+ sta  $1374,y           ; Store in backup buffer $1374+Y
+                        ; Save filename character for restoration
+ lda  #$a0              ; Load accumulator with $A0
+                        ; Space character (Apple II encoding)
+ sta  $132b,y           ; Store space in $132B+Y
+                        ; Clear filename buffer (pad with spaces)
+ dey                    ; Decrement Y register
+                        ; Move to previous character
+ bpl  -$0e              ; Branch if Plus: loop back if Y >= 0
+                        ; Continue until all 30 bytes processed
+; Scan input buffer for filename characters
+ ldy  #$ff              ; Load Y register with $FF
+                        ; Initialize scan pointer (-1)
+ iny                    ; Increment Y register
+                        ; Start at position 0
+ cmp  $0200,y           ; Compare accumulator with $0200+Y
+                        ; Check character in input buffer
+ beq  -$06              ; Branch if Equal: loop back if match found
+                        ; Continue scanning until matching char found
+ lda  $0200,y           ; Load accumulator from $0200+Y
+                        ; Read character from input buffer
+ cmp  #$c0              ; Compare with $C0 (Apple II code for '@')
+                        ; Check if control character/end marker
+ bcc  +$54              ; Branch if Carry Clear: jump +84 bytes if valid
+                        ; If character is less than $C0, continue processing
  cmp  #$e0
  bcs  +$50
  ldx  #$00
@@ -2008,79 +2427,164 @@ loc_0bea:
  lda  #$00
  sta  $18fd
  ldy  #$15
- lda  $18f9,y
- sta  ($00),y
- dey
- bpl  -$08
- jsr  $03d6
- php
- ldy  #$15
- lda  ($00),y
- sta  $18f9,y
- dey
- bpl  -$08
- plp
- bcc  +$0d
- lda  $1903
- cmp  #$06
- beq  +$06
- sta  $131b
- jmp  $12a4
- jsr  $102d
- pla
- tax
- pla
- tay
- pla
- rts
- jsr  $fd8e
- jsr  $ff3a
- jsr  $ff3a
- lda  $131b
- cmp  #$09
- bne  +$1e
- ldx  #$10
- jsr  print_string
- bit  $1325
- bpl  +$08
- lda  #$08
- sta  $18f9
- jsr  $1266
- lda  #$05
- sta  $18f9
- jsr  $1266
- ldx  #$1a
- bne  +$34
- cmp  #$04
- bne  +$04
- ldx  #$11
- bne  +$2c
- cmp  #$10
- bne  +$04
- ldx  #$11
- bne  +$24
- cmp  #$0a
- bne  +$04
- ldx  #$12
- bne  +$1c
- cmp  #$08
- beq  +$16
- cmp  #$80
- beq  +$12
- cmp  #$40
- beq  +$0e
- ldx  #$08
- jsr  print_string
- lda  $131b
- jsr  $fdda
- jmp  $03d3
- ldx  #$13
- jsr  print_string
- ldx  $131c
- txs
- ldx  #$00
- stx  $13ad
- jsr  press_any_key
+; === DOS PARAMETER BLOCK COPY & EXECUTION ===
+; Copy DOS parameter block and execute file operation
+ lda  $18f9,y           ; Load accumulator from $18F9+Y
+                        ; Read DOS parameter block byte
+ sta  ($00),y           ; Store in ($00)+Y (destination parameter area)
+                        ; Copy parameter byte to destination
+ dey                    ; Decrement Y register
+                        ; Move to previous byte
+ bpl  -$08              ; Branch if Plus: loop back if Y >= 0
+                        ; Continue copying until all bytes transferred
+ jsr  $03d6             ; Jump to subroutine at $03D6
+                        ; DOS: execute file operation with parameter block
+                        ; Performs read/write/lock/unlock based on parameter
+ php                    ; Push processor status register onto stack
+                        ; Save carry flag and other status flags
+ ldy  #$15              ; Load Y register with $15 (21 decimal)
+                        ; Offset for copying result bytes back
+ lda  ($00),y           ; Load accumulator from ($00)+Y
+                        ; Read result byte from DOS operation
+ sta  $18f9,y           ; Store in $18F9+Y
+                        ; Copy result back to parameter block
+ dey                    ; Decrement Y register
+                        ; Move to previous byte
+ bpl  -$08              ; Branch if Plus: loop back if Y >= 0
+                        ; Continue copying all result bytes
+ plp                    ; Pull processor status register from stack
+                        ; Restore carry flag from DOS operation
+ bcc  +$0d              ; Branch if Carry Clear: jump +13 bytes if success
+                        ; If carry is clear (no error), skip error handling
+; DOS operation error path
+ lda  $1903             ; Load accumulator with $1903
+                        ; DOS operation result/error code
+ cmp  #$06              ; Compare with $06
+                        ; Check if result code is $06 (likely success)
+ beq  +$06              ; Branch if Equal: jump +6 bytes if $06
+                        ; If it's $06, continue normally
+ sta  $131b             ; Store error code in $131B
+                        ; Save error code for later display
+ jmp  $12a4             ; Jump to address $12A4
+                        ; Go to error reporting routine
+; Cleanup and return
+ jsr  $102d             ; Jump to subroutine at $102D
+                        ; Cleanup routine after DOS operation
+ pla                    ; Pull accumulator from stack
+                        ; Restore A register from caller
+ tax                    ; Transfer A to X register
+                        ; Save value in X for return
+ pla                    ; Pull Y register from stack
+                        ; Restore Y register value
+ tay                    ; Transfer to Y register
+                        ; Restore Y for return
+ pla                    ; Pull return address low byte from stack
+                        ; (This was pre-pushed by caller)
+ rts                    ; Return from Subroutine
+                        ; Return to caller
+; === ERROR REPORTING & MESSAGE DISPLAY ===
+; Display DOS error messages based on error code
+ jsr  $fd8e             ; Jump to subroutine at $FD8E
+                        ; Apple II ROM: carriage return/newline
+ jsr  $ff3a             ; Jump to subroutine at $FF3A
+                        ; Apple II ROM: control sequence
+ jsr  $ff3a             ; Jump to subroutine at $FF3A
+                        ; Apple II ROM: second control sequence
+ lda  $131b             ; Load accumulator with $131B
+                        ; DOS error code from operation
+ cmp  #$09              ; Compare with $09
+                        ; Check for specific error code $09
+ bne  +$1e              ; Branch if Not Equal: jump +30 bytes if not $09
+                        ; If not error $09, check other codes
+ ldx  #$10              ; Load X register with $10 (string index 16)
+                        ; String 16: "ERROR. CODE=" message header
+ jsr  print_string      ; Jump to subroutine at $0ACD
+                        ; Display error code header message
+ bit  $1325             ; Test byte at $1325
+                        ; Bit test FILE_STATUS for write-protect bit 7
+ bpl  +$08              ; Branch if Plus: jump +8 bytes if bit 7 clear
+                        ; Skip unlock/delete if not locked
+ lda  #$08              ; Load accumulator with $08
+                        ; DOS operation code: UNLOCK
+ sta  $18f9             ; Store operation code at $18F9
+                        ; DOS parameter block
+ jsr  $1266             ; Jump to subroutine at $1266
+                        ; DOS file manager: unlock file
+ lda  #$05              ; Load accumulator with $05
+                        ; DOS operation code: DELETE
+ sta  $18f9             ; Store operation code at $18F9
+                        ; DOS parameter block
+ jsr  $1266             ; Jump to subroutine at $1266
+                        ; DOS file manager: delete file
+ ldx  #$1a              ; Load X register with $1A (string index 26)
+                        ; String 26: additional error message
+
+; === ERROR CODE DISPATCH TABLE ===
+; Branch to appropriate error message for different DOS error codes
+ bne  +$34              ; Branch if Not Equal: jump +52 bytes
+                        ; If not error $09, continue checking
+ cmp  #$04              ; Compare error code with $04
+                        ; Check for error code $04
+ bne  +$04              ; Branch if Not Equal: skip this handler
+ ldx  #$11              ; Load X register with $11 (string index 17)
+                        ; String 17: error message for code $04
+ bne  +$2c              ; Branch unconditionally +44 bytes
+                        ; Skip remaining error checks
+ cmp  #$10              ; Compare error code with $10
+                        ; Check for error code $10
+ bne  +$04              ; Branch if Not Equal: skip this handler
+ ldx  #$11              ; Load X register with $11 (string index 17)
+                        ; String 17: error message for code $10
+ bne  +$24              ; Branch unconditionally +36 bytes
+                        ; Skip remaining error checks
+ cmp  #$0a              ; Compare error code with $0A
+                        ; Check for error code $0A
+ bne  +$04              ; Branch if Not Equal: skip this handler
+ ldx  #$12              ; Load X register with $12 (string index 18)
+                        ; String 18: error message for code $0A
+ bne  +$1c              ; Branch unconditionally +28 bytes
+                        ; Skip remaining error checks
+ cmp  #$08              ; Compare error code with $08
+                        ; Check for error code $08
+ beq  +$16              ; Branch if Equal: jump +22 bytes if match
+                        ; If error $08 found, process it
+ cmp  #$80              ; Compare error code with $80
+                        ; Check for error code $80 (bit 7 set)
+ beq  +$12              ; Branch if Equal: jump +18 bytes if match
+                        ; If error $80 found, process it
+ cmp  #$40              ; Compare error code with $40
+                        ; Check for error code $40
+ beq  +$0e              ; Branch if Equal: jump +14 bytes if match
+                        ; If error $40 found, process it
+; Default error message
+ ldx  #$08              ; Load X register with $08 (string index 8)
+                        ; String 8: generic/default error message
+ jsr  print_string      ; Jump to subroutine at $0ACD
+                        ; Display default error message
+ lda  $131b             ; Load accumulator with $131B
+                        ; Reload error code
+ jsr  $fdda             ; Jump to subroutine at $FDDA
+                        ; Apple II ROM: output error code as decimal
+ jmp  $03d3             ; Jump to address $03D3
+                        ; Jump to DOS warm start (exit FID)
+
+; === COMPLETION & RETURN TO MENU ===
+; Display completion message and return to main menu
+ ldx  #$13              ; Load X register with $13 (string index 19)
+                        ; String 19: "COPY COMPLETE" or success message
+ jsr  print_string      ; Jump to subroutine at $0ACD
+                        ; Display completion message
+ ldx  $131c             ; Load X register with $131C
+                        ; Load some operation counter/state
+ txs                    ; Transfer X to stack pointer register
+                        ; Set stack pointer from X value
+ ldx  #$00              ; Load X register with $00
+                        ; Initialize index
+ stx  $13ad             ; Store $00 in OPERATION_MODE ($13AD)
+                        ; Clear operation mode flag
+ jsr  press_any_key     ; Jump to subroutine
+                        ; Wait for any key press before returning
+                        ; Returns to main menu when key pressed
  jmp  main_loop
 
 ; ============================================================================
