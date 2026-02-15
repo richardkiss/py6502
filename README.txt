@@ -20,9 +20,8 @@ See SKILLS.md for reverse engineering workflow documentation.
 Original py6502 by David Johnston (https://github.com/dj-on-github/py6502/)
 
 ==========================
-
-A python based 6502 assembler, disassembler and simulator
-David Johnston
+ORIGINAL README
+==========================
 
 The Philosophy
 --------------
