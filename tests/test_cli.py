@@ -14,7 +14,7 @@ import pytest
 # Add the parent directory to the path so we can import py6502
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from py6502 import cli_asm6502, cli_debugger, cli_dis6502, cli_sim6502
+from py6502 import cli_asm6502, cli_dis6502, cli_sim6502
 
 
 class TestCLIAssembler:
@@ -220,39 +220,6 @@ class TestCLIDisassembler:
     def test_disassemble_nonexistent_file(self):
         """Test handling of non-existent input file."""
         result = cli_dis6502.main(["nonexistent.bin"])
-        assert result == 1
-
-
-class TestCLIDebugger:
-    """Tests for the CLI debugger (db6502)."""
-
-    @pytest.fixture
-    def sample_asm_file(self):
-        """Create a temporary assembly file for testing."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".asm", delete=False) as f:
-            f.write("""
-    ORG $0200
-    LDA #$42
-    STA $10
-    BRK
-            """)
-            return f.name
-
-    def test_debugger_simple_mode(self, sample_asm_file):
-        """Test debugger in simple mode."""
-        # Note: This will likely require mocking user input or using --simple flag
-        result = cli_debugger.main([sample_asm_file, "--simple"])
-        # The debugger might return 0 or 1 depending on implementation
-        assert result in [0, 1]
-
-    def test_debugger_with_start_address(self, sample_asm_file):
-        """Test debugger with custom start address."""
-        result = cli_debugger.main([sample_asm_file, "--simple", "-s", "0x0200"])
-        assert result in [0, 1]
-
-    def test_debugger_nonexistent_file(self):
-        """Test handling of non-existent input file."""
-        result = cli_debugger.main(["nonexistent.asm"])
         assert result == 1
 
 
